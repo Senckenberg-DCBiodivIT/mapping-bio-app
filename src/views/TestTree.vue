@@ -1,6 +1,6 @@
 <template>
   <hr />
-  Debug: Selected value left:{{ trealueLeft }} Selected value right:{{
+  Debug: Selected value left:{{ treeValueLeft }} Selected value right:{{
     treeValueRight
   }}
   <br />
@@ -395,46 +395,25 @@ export default {
           // children: [],
         };
 
-        this[`treeOptions${position}`].push({
-          id: item,
-          label: this.metadataFromQuad[position].labels[item],
-        });
+        // this[`treeOptions${position}`].push({
+        //   id: item,
+        //   label: this.metadataFromQuad[position].labels[item],
+        // });
       }
 
       // Second step
-
-      // console.log("tempStructure");
-      // console.log(tempStructure);
-
       let changeFlag = true;
       let copy_move = false; // false: copy, true: move
       while (changeFlag) {
         changeFlag = false;
 
-        // console.log("loop tempStructure");
-        // console.dir(tempStructure);
-
         for (let item in tempStructure) {
-          // console.log("");
-          // console.log("loop in FOR");
-          // console.dir(tempStructure);
-
           let parent = this.metadataFromQuad[position].subClassOf[item];
 
           if (parent != undefined && tempStructure[parent] != undefined) {
-            // console.log("parent");
-            // console.dir(parent);
-            // console.log("item");
-            // console.dir(item);
-
-            // console.log("tempStructure[parent]");
-            // console.dir(tempStructure[parent]);
-
             tempStructure[parent][item] = tempStructure[item];
 
             if (copy_move) delete tempStructure[item];
-
-            // console.dir(tempStructure[parent]);
 
             copy_move = !copy_move;
             changeFlag = true;
@@ -442,8 +421,39 @@ export default {
         }
       }
 
-      console.log("tempStructure");
-      console.dir(tempStructure);
+      // Tree Structure
+      var testStructForTheTree = [];
+
+      var traverseStructure = (
+        item,
+        source,
+        position,
+        metadata = this.metadataFromQuad[position]
+      ) => {
+        var currentState = {
+          id: `${item}_${position}`,
+          label: metadata.labels[item],
+        };
+
+        if (Object.keys(source).length > 0) currentState["children"] = [];
+        for (var childNode in source) {
+          currentState["children"].push(
+            traverseStructure(childNode, source[childNode], position)
+          );
+        }
+
+        return currentState;
+      };
+
+      // Step 1. Check if there's more than one root.
+      for (let item in tempStructure) {
+        // Step 2. Create the scructure
+        testStructForTheTree.push(
+          traverseStructure(item, tempStructure[item], position)
+        );
+      }
+      this[`treeOptions${position}`] = testStructForTheTree;
+
       console.groupEnd();
     },
 
