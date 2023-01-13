@@ -298,7 +298,7 @@ export default {
       console.groupEnd();
     },
 
-    preprocessingMetadataQuads(quads, position) {
+    preprocessingMetadataQuads(quads, position) /*OK*/ {
       /*
           From quads here you go the labels. 
           Format: {id:label,...}
@@ -361,46 +361,18 @@ export default {
       // console.groupEnd();
     },
 
-    createTopDownHierarchy(position) {
+    createTopDownHierarchy(position) /*OK*/ {
       /*
-      Here you use subclasses to create a top-down structure
-  */
+          Here you use subclasses to create a top-down structure
+      */
       console.group("createTopDownHierarchy");
       var tempStructure = {};
 
       // First step
-      // for (let item in this.metadataFromQuad[position].subClassOf) {
-      //   var shortTemp = this.metadataFromQuad[position].subClassOf[item];
-      //   if (tempStructure[shortTemp] == undefined) {
-      //     tempStructure[shortTemp] = [item];
-      //   }
-      //   // Allready created
-      //   else tempStructure[shortTemp].push(item);
-      // }
-
-      console.log("this.metadataFromQuad[position].subClassOf");
-      console.dir(this.metadataFromQuad[position].subClassOf);
-
       this[`treeOptions${position}`] = [];
 
       for (let item in this.metadataFromQuad[position].subClassOf) {
-        // let id = this.metadataFromQuad[position].subClassOf[item];
-        // tempStructure[id] = {
-        // name: this.metadataFromQuad[position].labels[id],
-        // id: id,
-        // children: [],
-        // };
-
-        tempStructure[item] = {
-          // name: this.metadataFromQuad[position].labels[item],
-          // id: item,
-          // children: [],
-        };
-
-        // this[`treeOptions${position}`].push({
-        //   id: item,
-        //   label: this.metadataFromQuad[position].labels[item],
-        // });
+        tempStructure[item] = {};
       }
 
       // Second step
@@ -459,7 +431,7 @@ export default {
       console.groupEnd();
     },
 
-    loadOntology(event, position) {
+    loadOntology(event, position) /*OK*/ {
       console.group("loadOntology", position);
 
       this[`options${position}`] = [];
@@ -505,11 +477,6 @@ export default {
       } else {
         //ERROR
       }
-
-      // this[`options${position}`] = testTTL;
-
-      // console.log("testTTL", testTTL);
-      console.log("this[`options${position}`]", this[`options${position}`]);
 
       console.groupEnd();
     },
