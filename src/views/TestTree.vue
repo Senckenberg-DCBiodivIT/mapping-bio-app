@@ -1,11 +1,10 @@
 <template>
-  <hr />
+  <!-- <hr />
   Debug: Selected value left:{{ treeValueLeft }} Selected value right:{{
     treeValueRight
   }}
   <br />
-
-  <hr />
+  <hr /> -->
 
   <!-- TODO: mappingTable as an own component with an store segment? -->
   <p class="has-text-centered">Mapping (TODO: Layout)</p>
@@ -47,7 +46,7 @@
 
   <!-- Buttons "Load" and "Download CSV" -->
   <div class="columns">
-    <div class="column is-half">
+    <div class="column is-4">
       <div
         class="file is-primary is-centered"
         :class="{ 'has-name': hasMappingFileName }"
@@ -72,11 +71,11 @@
         </label>
       </div>
     </div>
-    <div class="column is-half">
-      <o-button
-        :label="'(Disabled) Download current mapping table'"
-        :variant="'disabled'"
-      />
+    <div class="column is-4">
+      <o-button :label="'(Disabled) Export RDF (XLM)'" :variant="'disabled'" />
+    </div>
+    <div class="column is-4">
+      <o-button :label="'(Disabled) Export TTL'" :variant="'disabled'" />
     </div>
   </div>
 
@@ -116,6 +115,7 @@
     <o-button :label="'Add mapping'" :variant="'info'" @click="addMapping" />
   </div>
 
+  <!-- Tree view -->
   <div class="columns" @click="selectValue">
     <!-- Component source tree view -->
     <div class="column is-4">
@@ -271,7 +271,14 @@ export default {
       treeOptionstarget: [],
 
       dropdownSelectedItem: 0,
-      dropdownItems: ["Value 1", "Value 2", "Value 3", "Value 4", "Value 5"],
+      dropdownItems: [
+        // "skos:mappingRelation",
+        "skos:closeMatch",
+        "skos:exactMatch",
+        "skos:broadMatch",
+        "skos:narrowMatch",
+        "skos:relatedMatch",
+      ],
     };
   },
 
