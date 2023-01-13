@@ -67,7 +67,7 @@
       </div>
     </div>
     <div class="column is-4">
-      <o-button :label="'(Disabled) Export RDF (XLM)'" :variant="'disabled'" />
+      <o-button :label="'(Disabled) Export RDF/XML'" :variant="'disabled'" />
     </div>
     <div class="column is-4">
       <o-button :label="'(Disabled) Export TTL'" :variant="'disabled'" />
@@ -286,11 +286,21 @@ export default {
 
       for (var item in this.prefixes) {
         if (this.prefixes[item].rdf == undefined) {
-          this.prefixes[item].rdf = "undefined";
+          this.prefixes[item]["rdf"] = {
+            id: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+          };
         }
 
         if (this.prefixes[item].rdfs == undefined) {
-          this.prefixes[item].rdfs = "undefined";
+          this.prefixes[item]["rdfs"] = {
+            id: "http://www.w3.org/2000/01/rdf-schema#",
+          };
+        }
+
+        if (this.prefixes[item].owl == undefined) {
+          this.prefixes[item]["owl"] = {
+            id: "http://www.w3.org/2002/07/owl#",
+          };
         }
       }
 
@@ -304,7 +314,7 @@ export default {
           Format: {id:label,...}
       */
       // console.group("preprocessingMetadataQuads()");
-
+      console.group("preprocessingMetadataQuads", quads);
       this.metadataFromQuad[position].labels = {};
       this.metadataFromQuad[position].subClassOf = {};
 
@@ -320,37 +330,37 @@ export default {
         for (var item of quads) {
           // Ontology
           if (
-            item._predicate.value
+            item.predicate.value
               .split(this.prefixes[position].owl.id)
               .slice(-1)[0] === "Ontology"
           ) {
-            this.metadataFromQuad[position].subClassOf[item._subject.id] =
+            this.metadataFromQuad[position].subClassOf[item.subject.value] =
               "Ontology root";
           }
 
           // label
           if (
-            item._predicate.value
+            item.predicate.value
               .split(this.prefixes[position].rdfs.id)
               .slice(-1)[0] === "label"
           ) {
-            this.metadataFromQuad[position].labels[item._subject.id] =
-              item._object.id.replaceAll('"', "");
+            this.metadataFromQuad[position].labels[item.subject.value] =
+              item.object.value.replaceAll('"', "");
           }
 
           // subClassOf
           else if (
-            item._predicate.value
+            item.predicate.value
               .split(this.prefixes[position].rdfs.id)
               .slice(-1)[0] === "subClassOf"
           ) {
-            this.metadataFromQuad[position].subClassOf[item._subject.id] =
-              item._object.id.replaceAll('"', "");
+            this.metadataFromQuad[position].subClassOf[item.subject.value] =
+              item.object.value.replaceAll('"', "");
           }
 
           // Leftovers
           else {
-            // console.log("Leftover", item._predicate.value);
+            // console.log("Leftover", item.predicate.value);
             // console.log("Item", item);
           }
         }
@@ -358,7 +368,7 @@ export default {
 
         this.createTopDownHierarchy(position);
       }
-      // console.groupEnd();
+      console.groupEnd();
     },
 
     createTopDownHierarchy(position) /*OK*/ {
@@ -444,7 +454,7 @@ export default {
         .toLowerCase();
 
       var reader = new FileReader();
-
+      let mimeType = "";
       // Reader definition
       reader.onload = (e, that = this) => {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -452,15 +462,18 @@ export default {
 
         var tempTTL = [];
         that.prefixes[position] = {};
-
+        console.log("mimeType: ", mimeType);
         rdfParser
           .parse(ontologyStream, {
-            contentType: "text/turtle",
+            // contentType: ,
+            contentType: mimeType,
             baseIRI: "http://example.org",
           })
           .on("data", (quad) => tempTTL.push(quad))
 
           .on("prefix", (prefix, iri) => {
+            // console.log(`${prefix} : ${iri}`);
+            // console.dir(Object.keys(iri));
             that.prefixes[position][prefix] = iri;
           })
 
@@ -473,6 +486,14 @@ export default {
 
       // Read file
       if (fileExtension == "ttl") {
+        mimeType = "text/turtle";
+        reader.readAsText(file);
+      } else {
+        //ERROR
+      }
+
+      if (fileExtension == "rdf" || fileExtension == "xml") {
+        mimeType = "application/rdf+xml";
         reader.readAsText(file);
       } else {
         //ERROR
