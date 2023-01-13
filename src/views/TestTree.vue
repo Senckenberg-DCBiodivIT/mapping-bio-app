@@ -7,7 +7,9 @@
   <hr /> -->
 
   <!-- TODO: mappingTable as an own component with an store segment? -->
-  <p class="has-text-centered">Mapping (TODO: Layout)</p>
+  <div class="has-text-centered" style="margin-top: 1em; font-size: 2em">
+    Mapping
+  </div>
   <br />
 
   <!-- mappping table, CSV, RDF projection -->
@@ -218,7 +220,7 @@ export default {
         target: { labels: {}, subClassOf: {} },
       },
 
-      openCloseTableView: false, // false: closed, true: open
+      openCloseTableView: true, // false: closed, true: open
 
       mappingDataTableConfig: [
         {
