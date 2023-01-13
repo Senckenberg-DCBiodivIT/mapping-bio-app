@@ -12,18 +12,6 @@ export default createRouter({
     },
 
     {
-      path: "/test",
-      name: "Test",
-
-      component: () => import("../views/Test.vue"),
-    },
-    {
-      path: "/testSigma",
-      name: "testSigma",
-
-      component: () => import("../views/TestSigma.vue"),
-    },
-    {
       path: "/testWeb",
       name: "testWeb",
 

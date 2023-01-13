@@ -1,20 +1,22 @@
 <template>
   <div class="is-active">
-    <router-link to="/test" class="ownFont">
-      <span class="ownFont"><s>First test</s> (canceled)</span></router-link
-    ><br />
+    <div class="columns">
+      <div class="column is-3">
+        <router-link to="/testWeb">
+          <span class="ownFont">Test WebVOWL (currently not in Vue)</span>
+        </router-link>
 
-    <router-link to="/testSigma"
-      ><span class="ownFont"><s>Test Sigma</s> (canceled)</span></router-link
-    >
-
-    <br /><router-link to="/testWeb">
-      <span class="ownFont">Test WebVOWL (currently not in Vue)</span>
-    </router-link>
-
-    <br /><router-link to="/testtree">
-      <span class="ownFont">Test Tree View (in progress)</span>
-    </router-link>
+        <br /><router-link to="/testtree">
+          <span class="ownFont">Test Tree View (in progress)</span>
+        </router-link>
+      </div>
+      <div class="column is-9">
+        <div class="has-text-centered ownFont bigText">
+          BioDT WP5 <br />
+          Prototype V0.6.1
+        </div>
+      </div>
+    </div>
 
     <!-- <nav
       class="navbar is-secondary"
@@ -126,5 +128,9 @@ export default {
 
 .ownFont {
   color: white !important;
+}
+
+.bigText {
+  font-size: 2em;
 }
 </style>
