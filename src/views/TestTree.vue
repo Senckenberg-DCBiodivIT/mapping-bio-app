@@ -1,11 +1,4 @@
 <template>
-  <!-- <hr />
-  Debug: Selected value left:{{ treeValueLeft }} Selected value right:{{
-    treeValueRight
-  }}
-  <br />
-  <hr /> -->
-
   <!-- TODO: mappingTable as an own component with an store segment? -->
   <div class="has-text-centered" style="margin-top: 1em; font-size: 2em">
     Mapping
@@ -85,7 +78,7 @@
 
   <!-- TODO: Component mapping table control? -->
   <div class="has-text-centered" @resize="selectValue">
-    <o-field label="(check the documentation for mappings) Select:" variant="">
+    <o-field label="Select mapping relation:" variant="">
       <o-dropdown
         aria-role="list"
         v-model="dropdownSelectedItem"
