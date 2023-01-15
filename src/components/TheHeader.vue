@@ -10,12 +10,13 @@
           <span class="ownFont">Test Tree View (in progress)</span>
         </router-link>
       </div>
-      <div class="column is-9">
+      <div class="column">
         <div class="has-text-centered ownFont bigText">
           BioDT WP5 <br />
           Prototype V0.6.1
         </div>
       </div>
+      <div class="column is-3"></div>
     </div>
 
     <!-- <nav
