@@ -40,8 +40,8 @@
   <br /><br />
 
   <!-- Buttons "Load" and "Download CSV" -->
-  <div class="columns">
-    <div class="column is-4">
+  <div class="columns has-text-centered">
+    <div class="column is-3">
       <div
         class="file is-primary is-centered"
         :class="{ 'has-name': hasMappingFileName }"
@@ -66,10 +66,13 @@
         </label>
       </div>
     </div>
-    <div class="column is-4">
+    <div class="column is-3">
+      <o-button :label="'(Disabled) Export CSV'" :variant="'disabled'" />
+    </div>
+    <div class="column is-3">
       <o-button :label="'(Disabled) Export RDF/XML'" :variant="'disabled'" />
     </div>
-    <div class="column is-4">
+    <div class="column is-3">
       <o-button :label="'(Disabled) Export TTL'" :variant="'disabled'" />
     </div>
   </div>
