@@ -58,7 +58,7 @@
             <span class="file-icon">
               <i class="fas fa-upload"></i>
             </span>
-            <span class="file-label"> Choose a CSV or RDF file </span>
+            <span class="file-label">Choose a CSV or RDF file</span>
           </span>
           <span class="file-name" v-if="hasMappingFileName"
             >{{ mappingtableFilename }}
@@ -282,7 +282,7 @@ export default {
       /*
           Here you can check the loaded prefixes and fix the data, if necessary 
       */
-      console.group("checkPrefixes");
+      // console.group("checkPrefixes");
 
       for (var item in this.prefixes) {
         if (this.prefixes[item].rdf == undefined) {
@@ -304,8 +304,8 @@ export default {
         }
       }
 
-      console.log("this.prefixes", this.prefixes);
-      console.groupEnd();
+      // console.log("this.prefixes", this.prefixes);
+      // console.groupEnd();
     },
 
     preprocessingMetadataQuads(quads, position) /*OK*/ {
@@ -317,57 +317,61 @@ export default {
       console.group("preprocessingMetadataQuads", quads);
       this.metadataFromQuad[position].labels = {};
       this.metadataFromQuad[position].subClassOf = {};
+      this.metadataFromQuad[position].class = {};
 
-      if (
-        this.prefixes[position].rdfs == "undefined" ||
-        this.prefixes[position].owl == "undefined"
-      ) {
-        // TODO: ERROR
-      }
-
-      // Check values
-      else {
-        for (var item of quads) {
-          // Ontology
-          if (
-            item.predicate.value
-              .split(this.prefixes[position].owl.id)
-              .slice(-1)[0] === "Ontology"
-          ) {
-            this.metadataFromQuad[position].subClassOf[item.subject.value] =
-              "Ontology root";
-          }
-
-          // label
-          if (
-            item.predicate.value
-              .split(this.prefixes[position].rdfs.id)
-              .slice(-1)[0] === "label"
-          ) {
-            this.metadataFromQuad[position].labels[item.subject.value] =
-              item.object.value.replaceAll('"', "");
-          }
-
-          // subClassOf
-          else if (
-            item.predicate.value
-              .split(this.prefixes[position].rdfs.id)
-              .slice(-1)[0] === "subClassOf"
-          ) {
-            this.metadataFromQuad[position].subClassOf[item.subject.value] =
-              item.object.value.replaceAll('"', "");
-          }
-
-          // Leftovers
-          else {
-            // console.log("Leftover", item.predicate.value);
-            // console.log("Item", item);
-          }
+      for (var item of quads) {
+        // Ontology
+        if (
+          item.predicate.value
+            .split(this.prefixes[position].owl.id)
+            .slice(-1)[0] === "Ontology"
+        ) {
+          this.metadataFromQuad[position].subClassOf[item.subject.value] =
+            "Ontology root";
         }
-        console.log("metadataFromQuad", this.metadataFromQuad);
 
-        this.createTopDownHierarchy(position);
+        // label
+        if (
+          item.predicate.value
+            .split(this.prefixes[position].rdfs.id)
+            .slice(-1)[0] === "label"
+        ) {
+          this.metadataFromQuad[position].labels[item.subject.value] =
+            item.object.value.replaceAll('"', "");
+        }
+
+        // subClassOf
+        else if (
+          item.predicate.value
+            .split(this.prefixes[position].rdfs.id)
+            .slice(-1)[0] === "subClassOf"
+        ) {
+          this.metadataFromQuad[position].subClassOf[item.subject.value] =
+            item.object.value.replaceAll('"', "");
+        }
+
+        // Class
+        else if (
+          item.predicate.value
+            .split(this.prefixes[position].rdf.id)
+            .slice(-1)[0] === "type" &&
+          item.object.value
+            .split(this.prefixes[position].owl.id)
+            .slice(-1)[0] == "Class1"
+        ) {
+          this.metadataFromQuad[position].class[item.subject.value] = "Class";
+        }
+
+        // Leftovers
+        else {
+          console.log("Leftover", item.predicate.value);
+          console.log("Item", item);
+        }
       }
+      console.log("metadataFromQuad", this.metadataFromQuad);
+
+      this.createTopDownHierarchy(position);
+
       console.groupEnd();
     },
 
@@ -382,6 +386,9 @@ export default {
       this[`treeOptions${position}`] = [];
 
       for (let item in this.metadataFromQuad[position].subClassOf) {
+        tempStructure[item] = {};
+      }
+      for (let item in this.metadataFromQuad[position].class) {
         tempStructure[item] = {};
       }
 
@@ -711,8 +718,14 @@ export default {
           comment: "",
         });
       }
-
+      // this.resetArrows();
       window.mappingDataTable.load(currentState);
+      this.selectValue();
+    },
+
+    resetArrows() /*OK*/ {
+      this.treeValueLeft = [];
+      this.treeValueRight = [];
     },
   },
 
@@ -757,6 +770,13 @@ export default {
       },
       deep: true,
     },
+
+    // openCloseTableView: {
+    //   handler() {
+    //     this.selectValue();
+    //   },
+    //   deep: true,
+    // },
   },
 };
 </script>
