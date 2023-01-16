@@ -18,11 +18,7 @@
           <o-button
             variant="primary"
             aria-controls="mappingTableUI_ID"
-            v-text="
-              openCloseTableView
-                ? 'Close table view (TODO: Layout)'
-                : 'Open table view (TODO: Layout)'
-            "
+            v-text="openCloseTableView ? 'Close table view' : 'Open table view'"
           >
           </o-button>
         </p>
@@ -40,8 +36,8 @@
   <br /><br />
 
   <!-- Buttons "Load" and "Download CSV" -->
-  <div class="columns">
-    <div class="column is-4">
+  <div class="columns has-text-centered">
+    <div class="column is-3">
       <div
         class="file is-primary is-centered"
         :class="{ 'has-name': hasMappingFileName }"
@@ -58,7 +54,7 @@
             <span class="file-icon">
               <i class="fas fa-upload"></i>
             </span>
-            <span class="file-label"> Choose a CSV or RDF file </span>
+            <span class="file-label">Choose a CSV or RDF file...</span>
           </span>
           <span class="file-name" v-if="hasMappingFileName"
             >{{ mappingtableFilename }}
@@ -66,10 +62,13 @@
         </label>
       </div>
     </div>
-    <div class="column is-4">
-      <o-button :label="'(Disabled) Export RDF (XLM)'" :variant="'disabled'" />
+    <div class="column is-3">
+      <o-button :label="'(Disabled) Export CSV'" :variant="'disabled'" />
     </div>
-    <div class="column is-4">
+    <div class="column is-3">
+      <o-button :label="'(Disabled) Export RDF/XML'" :variant="'disabled'" />
+    </div>
+    <div class="column is-3">
       <o-button :label="'(Disabled) Export TTL'" :variant="'disabled'" />
     </div>
   </div>
@@ -130,7 +129,7 @@
             <span class="file-icon">
               <i class="fas fa-upload"></i>
             </span>
-            <span class="file-label"> Choose an TTL file… </span>
+            <span class="file-label">Choose an RDF/XML or TTL file…</span>
           </span>
           <span class="file-name" v-if="hasSourceFileName"
             >{{ sourceFilename }}
@@ -165,7 +164,7 @@
             <span class="file-icon">
               <i class="fas fa-upload"></i>
             </span>
-            <span class="file-label"> Choose an TTL file… </span>
+            <span class="file-label">Choose an RDF/XML or TTL file…</span>
           </span>
           <span class="file-name" v-if="hasTargetFileName"
             >{{ targetFilename }}
@@ -282,125 +281,114 @@ export default {
       /*
           Here you can check the loaded prefixes and fix the data, if necessary 
       */
-      console.group("checkPrefixes");
+      // console.group("checkPrefixes");
 
       for (var item in this.prefixes) {
         if (this.prefixes[item].rdf == undefined) {
-          this.prefixes[item].rdf = "undefined";
+          this.prefixes[item]["rdf"] = {
+            id: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+          };
         }
 
         if (this.prefixes[item].rdfs == undefined) {
-          this.prefixes[item].rdfs = "undefined";
+          this.prefixes[item]["rdfs"] = {
+            id: "http://www.w3.org/2000/01/rdf-schema#",
+          };
+        }
+
+        if (this.prefixes[item].owl == undefined) {
+          this.prefixes[item]["owl"] = {
+            id: "http://www.w3.org/2002/07/owl#",
+          };
         }
       }
 
-      console.log("this.prefixes", this.prefixes);
-      console.groupEnd();
+      // console.log("this.prefixes", this.prefixes);
+      // console.groupEnd();
     },
 
-    preprocessingMetadataQuads(quads, position) {
+    preprocessingMetadataQuads(quads, position) /*OK*/ {
       /*
           From quads here you go the labels. 
           Format: {id:label,...}
       */
       // console.group("preprocessingMetadataQuads()");
-
+      console.group("preprocessingMetadataQuads", quads);
       this.metadataFromQuad[position].labels = {};
       this.metadataFromQuad[position].subClassOf = {};
+      this.metadataFromQuad[position].class = {};
 
-      if (
-        this.prefixes[position].rdfs == "undefined" ||
-        this.prefixes[position].owl == "undefined"
-      ) {
-        // TODO: ERROR
-      }
-
-      // Check values
-      else {
-        for (var item of quads) {
-          // Ontology
-          if (
-            item._predicate.value
-              .split(this.prefixes[position].owl.id)
-              .slice(-1)[0] === "Ontology"
-          ) {
-            this.metadataFromQuad[position].subClassOf[item._subject.id] =
-              "Ontology root";
-          }
-
-          // label
-          if (
-            item._predicate.value
-              .split(this.prefixes[position].rdfs.id)
-              .slice(-1)[0] === "label"
-          ) {
-            this.metadataFromQuad[position].labels[item._subject.id] =
-              item._object.id.replaceAll('"', "");
-          }
-
-          // subClassOf
-          else if (
-            item._predicate.value
-              .split(this.prefixes[position].rdfs.id)
-              .slice(-1)[0] === "subClassOf"
-          ) {
-            this.metadataFromQuad[position].subClassOf[item._subject.id] =
-              item._object.id.replaceAll('"', "");
-          }
-
-          // Leftovers
-          else {
-            // console.log("Leftover", item._predicate.value);
-            // console.log("Item", item);
-          }
+      for (var item of quads) {
+        // Ontology
+        if (
+          item.predicate.value
+            .split(this.prefixes[position].owl.id)
+            .slice(-1)[0] === "Ontology"
+        ) {
+          this.metadataFromQuad[position].subClassOf[item.subject.value] =
+            "Ontology root";
         }
-        console.log("metadataFromQuad", this.metadataFromQuad);
 
-        this.createTopDownHierarchy(position);
+        // label
+        if (
+          item.predicate.value
+            .split(this.prefixes[position].rdfs.id)
+            .slice(-1)[0] === "label"
+        ) {
+          this.metadataFromQuad[position].labels[item.subject.value] =
+            item.object.value.replaceAll('"', "");
+        }
+
+        // subClassOf
+        else if (
+          item.predicate.value
+            .split(this.prefixes[position].rdfs.id)
+            .slice(-1)[0] === "subClassOf"
+        ) {
+          this.metadataFromQuad[position].subClassOf[item.subject.value] =
+            item.object.value.replaceAll('"', "");
+        }
+
+        // Class
+        else if (
+          item.predicate.value
+            .split(this.prefixes[position].rdf.id)
+            .slice(-1)[0] === "type" &&
+          item.object.value
+            .split(this.prefixes[position].owl.id)
+            .slice(-1)[0] == "Class1"
+        ) {
+          this.metadataFromQuad[position].class[item.subject.value] = "Class";
+        }
+
+        // Leftovers
+        else {
+          console.log("Leftover", item.predicate.value);
+          console.log("Item", item);
+        }
       }
-      // console.groupEnd();
+      console.log("metadataFromQuad", this.metadataFromQuad);
+
+      this.createTopDownHierarchy(position);
+
+      console.groupEnd();
     },
 
-    createTopDownHierarchy(position) {
+    createTopDownHierarchy(position) /*OK*/ {
       /*
-      Here you use subclasses to create a top-down structure
-  */
+          Here you use subclasses to create a top-down structure
+      */
       console.group("createTopDownHierarchy");
       var tempStructure = {};
 
       // First step
-      // for (let item in this.metadataFromQuad[position].subClassOf) {
-      //   var shortTemp = this.metadataFromQuad[position].subClassOf[item];
-      //   if (tempStructure[shortTemp] == undefined) {
-      //     tempStructure[shortTemp] = [item];
-      //   }
-      //   // Allready created
-      //   else tempStructure[shortTemp].push(item);
-      // }
-
-      console.log("this.metadataFromQuad[position].subClassOf");
-      console.dir(this.metadataFromQuad[position].subClassOf);
-
       this[`treeOptions${position}`] = [];
 
       for (let item in this.metadataFromQuad[position].subClassOf) {
-        // let id = this.metadataFromQuad[position].subClassOf[item];
-        // tempStructure[id] = {
-        // name: this.metadataFromQuad[position].labels[id],
-        // id: id,
-        // children: [],
-        // };
-
-        tempStructure[item] = {
-          // name: this.metadataFromQuad[position].labels[item],
-          // id: item,
-          // children: [],
-        };
-
-        // this[`treeOptions${position}`].push({
-        //   id: item,
-        //   label: this.metadataFromQuad[position].labels[item],
-        // });
+        tempStructure[item] = {};
+      }
+      for (let item in this.metadataFromQuad[position].class) {
+        tempStructure[item] = {};
       }
 
       // Second step
@@ -459,7 +447,7 @@ export default {
       console.groupEnd();
     },
 
-    loadOntology(event, position) {
+    loadOntology(event, position) /*OK*/ {
       console.group("loadOntology", position);
 
       this[`options${position}`] = [];
@@ -472,7 +460,7 @@ export default {
         .toLowerCase();
 
       var reader = new FileReader();
-
+      let mimeType = "";
       // Reader definition
       reader.onload = (e, that = this) => {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -480,15 +468,18 @@ export default {
 
         var tempTTL = [];
         that.prefixes[position] = {};
-
+        console.log("mimeType: ", mimeType);
         rdfParser
           .parse(ontologyStream, {
-            contentType: "text/turtle",
+            // contentType: ,
+            contentType: mimeType,
             baseIRI: "http://example.org",
           })
           .on("data", (quad) => tempTTL.push(quad))
 
           .on("prefix", (prefix, iri) => {
+            // console.log(`${prefix} : ${iri}`);
+            // console.dir(Object.keys(iri));
             that.prefixes[position][prefix] = iri;
           })
 
@@ -501,15 +492,18 @@ export default {
 
       // Read file
       if (fileExtension == "ttl") {
+        mimeType = "text/turtle";
         reader.readAsText(file);
       } else {
         //ERROR
       }
 
-      // this[`options${position}`] = testTTL;
-
-      // console.log("testTTL", testTTL);
-      console.log("this[`options${position}`]", this[`options${position}`]);
+      if (fileExtension == "rdf" || fileExtension == "xml") {
+        mimeType = "application/rdf+xml";
+        reader.readAsText(file);
+      } else {
+        //ERROR
+      }
 
       console.groupEnd();
     },
@@ -632,9 +626,20 @@ export default {
               this.mappingtable[left] = {};
             }
 
+            console.log("left", left);
+            console.log(
+              "right",
+              this.metadataFromQuad.target.labels[right.replace("_target", "")]
+            );
             this.mappingtable[left][right] = {
-              sourceTitle: "Todo: set a source title",
-              targetTitle: "Todo: set a target title",
+              sourceTitle:
+                this.metadataFromQuad.source.labels[
+                  left.replace("_source", "")
+                ],
+              targetTitle:
+                this.metadataFromQuad.target.labels[
+                  right.replace("_target", "")
+                ],
               relation: "", // TODO: set the selected relation, but current we have different valuer in CSV ans RDF...
               comment: "",
             };
@@ -723,8 +728,14 @@ export default {
           comment: "",
         });
       }
-
+      // this.resetArrows();
       window.mappingDataTable.load(currentState);
+      this.selectValue();
+    },
+
+    resetArrows() /*OK*/ {
+      this.treeValueLeft = [];
+      this.treeValueRight = [];
     },
   },
 
@@ -769,6 +780,13 @@ export default {
       },
       deep: true,
     },
+
+    // openCloseTableView: {
+    //   handler() {
+    //     this.selectValue();
+    //   },
+    //   deep: true,
+    // },
   },
 };
 </script>
