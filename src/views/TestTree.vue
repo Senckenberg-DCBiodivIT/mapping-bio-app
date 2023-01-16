@@ -18,11 +18,7 @@
           <o-button
             variant="primary"
             aria-controls="mappingTableUI_ID"
-            v-text="
-              openCloseTableView
-                ? 'Close table view (TODO: Layout)'
-                : 'Open table view (TODO: Layout)'
-            "
+            v-text="openCloseTableView ? 'Close table view' : 'Open table view'"
           >
           </o-button>
         </p>
@@ -58,7 +54,7 @@
             <span class="file-icon">
               <i class="fas fa-upload"></i>
             </span>
-            <span class="file-label">Choose a CSV or RDF file</span>
+            <span class="file-label">Choose a CSV or RDF file...</span>
           </span>
           <span class="file-name" v-if="hasMappingFileName"
             >{{ mappingtableFilename }}
@@ -133,7 +129,7 @@
             <span class="file-icon">
               <i class="fas fa-upload"></i>
             </span>
-            <span class="file-label"> Choose an TTL file… </span>
+            <span class="file-label">Choose an RDF/XML or TTL file…</span>
           </span>
           <span class="file-name" v-if="hasSourceFileName"
             >{{ sourceFilename }}
@@ -168,7 +164,7 @@
             <span class="file-icon">
               <i class="fas fa-upload"></i>
             </span>
-            <span class="file-label"> Choose an TTL file… </span>
+            <span class="file-label">Choose an RDF/XML or TTL file…</span>
           </span>
           <span class="file-name" v-if="hasTargetFileName"
             >{{ targetFilename }}
@@ -630,9 +626,20 @@ export default {
               this.mappingtable[left] = {};
             }
 
+            console.log("left", left);
+            console.log(
+              "right",
+              this.metadataFromQuad.target.labels[right.replace("_target", "")]
+            );
             this.mappingtable[left][right] = {
-              sourceTitle: "Todo: set a source title",
-              targetTitle: "Todo: set a target title",
+              sourceTitle:
+                this.metadataFromQuad.source.labels[
+                  left.replace("_source", "")
+                ],
+              targetTitle:
+                this.metadataFromQuad.target.labels[
+                  right.replace("_target", "")
+                ],
               relation: "", // TODO: set the selected relation, but current we have different valuer in CSV ans RDF...
               comment: "",
             };
