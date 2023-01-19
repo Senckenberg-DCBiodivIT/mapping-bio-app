@@ -206,10 +206,11 @@ export default {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
     return {
-      prefixes: { source: {}, target: {} },
+      prefixes: { source: {}, target: {}, mapping: {} },
       metadataFromQuad: {
-        source: { labels: {}, subClassOf: {} },
-        target: { labels: {}, subClassOf: {} },
+        source: {},
+        target: {},
+        mapping: {},
       },
 
       openCloseTableView: true, // false: closed, true: open
@@ -246,8 +247,8 @@ export default {
       ],
 
       mappingtableFilename: "",
-      mappingtableExtension: "", // csv or rdf, if available
-      mappingtableOrig: "", // Loaded data from the file, if you need a reset
+      mappingtableExtension: "", // csv, rdf/xml or ttl, if available
+      mappingtableOrig: "", // Loaded data from the file, if you need to reset
 
       mappingtable: [], // Definition look at loadMappingTable(). For the UI take mappingtableUI!
 
@@ -281,7 +282,8 @@ export default {
       /*
           Here you can check the loaded prefixes and fix the data, if necessary 
       */
-      // console.group("checkPrefixes");
+      console.group("checkPrefixes");
+      console.log("this.prefixes start check", this.prefixes);
 
       for (var item in this.prefixes) {
         if (this.prefixes[item].rdf == undefined) {
@@ -303,17 +305,37 @@ export default {
         }
       }
 
-      // console.log("this.prefixes", this.prefixes);
-      // console.groupEnd();
+      console.log("this.prefixes ready", this.prefixes);
+      console.groupEnd();
     },
 
-    preprocessingMetadataQuads(quads, position) /*OK*/ {
+    mappingtableFromRDF(quads) /*OK*/ {
+      console.group("preprocessingMetadataQuadsMappingtable", quads);
+      /*
+         Format mapping compare structure
+         {
+          "source link":{
+            "target link":{
+              "sourceTitle","targetTitle", "relation", "comment"
+            }
+          }
+         }
+         */
+
+      for (var item in quads) {
+        console.log("item", item);
+      }
+
+      console.groupEnd();
+    },
+
+    preprocessingMetadataQuadsOntology(quads, position) /*OK*/ {
       /*
           From quads here you go the labels. 
           Format: {id:label,...}
       */
-      // console.group("preprocessingMetadataQuads()");
-      console.group("preprocessingMetadataQuads", quads);
+      // console.group("preprocessingMetadataQuadsOntology()");
+      console.group("preprocessingMetadataQuadsOntology", quads);
       this.metadataFromQuad[position].labels = {};
       this.metadataFromQuad[position].subClassOf = {};
       this.metadataFromQuad[position].class = {};
@@ -468,7 +490,7 @@ export default {
 
         var tempTTL = [];
         that.prefixes[position] = {};
-        console.log("mimeType: ", mimeType);
+        // console.log("mimeType: ", mimeType);
         rdfParser
           .parse(ontologyStream, {
             // contentType: ,
@@ -486,22 +508,23 @@ export default {
           .on("error", (error) => console.error(error))
           .on("end", () => {
             that.checkPrefixes();
-            that.preprocessingMetadataQuads(tempTTL, position);
+            that.preprocessingMetadataQuadsOntology(tempTTL, position);
           });
       };
 
       // Read file
+      // TTL
       if (fileExtension == "ttl") {
         mimeType = "text/turtle";
         reader.readAsText(file);
-      } else {
-        //ERROR
       }
-
-      if (fileExtension == "rdf" || fileExtension == "xml") {
+      // RDF/XML
+      else if (fileExtension == "rdf" || fileExtension == "xml") {
         mimeType = "application/rdf+xml";
         reader.readAsText(file);
-      } else {
+      }
+      // ERROR
+      else {
         //ERROR
       }
 
@@ -521,11 +544,15 @@ export default {
         .toLowerCase();
 
       let reader = new FileReader();
+      let mimeType = "";
 
-      reader.onload = (e) => {
+      reader.onload = (e, that = this) => {
+        console.log("onload", onload);
+
         this.mappingtable = [];
         this.mappingtableOrig = e.target.result;
         this.mappingtableExtension = fileExtension;
+        console.log("this.mappingtableExtension", this.mappingtableExtension);
 
         /*
          Format mapping compare structure
@@ -556,7 +583,6 @@ export default {
 
           for (var cell of mappingtableRows) {
             var cellInRow = cell.split(",");
-            // console.log("cellInRow", cellInRow);
             if (this.mappingtable[cellInRow[2]] == undefined) {
               this.mappingtable[cellInRow[2]] = {};
             }
@@ -569,36 +595,76 @@ export default {
           }
           this.mappingtableFilename = file.name;
           this.refreshMappingtableUI();
-
-          // console.log("this.mappingtable", this.mappingtable);
         }
 
         // RDF(XML)
-        else if (this.mappingtableExtension === "rdf") {
-          // const myParser = new RdfXmlParser({ baseIRI: "http://example.org/" });
-          // var testArr = [];
-          // myParser
-          //   .on("data", function (d) {
-          //     testArr.push(d);
-          //   })
-          //   .on("error", console.error)
-          //   .on("end", () => console.log("All triples were parsed!", testArr));
-          // myParser.write(e.target.result);
-          // myParser.end();
-          // console.log("mappingtableRDF", mappingtableRDF);
-
+        else if (
+          this.mappingtableExtension === "rdf" ||
+          this.mappingtableExtension === "xml" ||
+          this.mappingtableExtension === "ttl"
+        ) {
+          console.log("RDF selected");
           // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const textStream = require("streamify-string")(this.mappingtableOrig);
+          const ontologyStream = require("streamify-string")(e.target.result);
 
+          var tempRDF = [];
+          that.prefixes["mapping"] = {};
+          console.log("mimeType: ", mimeType);
           rdfParser
-            .parse(textStream, {
-              contentType: "application/rdf+xml",
+            .parse(ontologyStream, {
+              // contentType: ,
+              contentType: mimeType,
               baseIRI: "http://example.org",
             })
-            .on("data", (quad) => console.log(quad))
+            .on("data", (quad) => tempRDF.push(quad))
+
+            .on("prefix", (prefix, iri) => {
+              console.log(`${prefix} : ${iri}`);
+              console.dir(Object.keys(iri));
+              that.prefixes["mapping"][prefix] = iri;
+            })
+
             .on("error", (error) => console.error(error))
-            .on("end", () => console.log("All done!"));
+            .on("end", () => {
+              that.checkPrefixes();
+              that.mappingtableFromRDF(tempRDF);
+            });
+
+          this.mappingtableFilename = file.name;
+          this.refreshMappingtableUI();
         }
+
+        // TTL(Turtle)
+        // else if (this.mappingtableExtension === "ttl") {
+        // // eslint-disable-next-line @typescript-eslint/no-var-requires
+        // const ontologyStream = require("streamify-string")(e.target.result);
+
+        // var tempTTL = [];
+        // that.prefixes[position] = {};
+        // // console.log("mimeType: ", mimeType);
+        // rdfParser
+        //   .parse(ontologyStream, {
+        //     // contentType: ,
+        //     contentType: mimeType,
+        //     baseIRI: "http://example.org",
+        //   })
+        //   .on("data", (quad) => tempTTL.push(quad))
+
+        //   .on("prefix", (prefix, iri) => {
+        //     // console.log(`${prefix} : ${iri}`);
+        //     // console.dir(Object.keys(iri));
+        //     that.prefixes[position][prefix] = iri;
+        //   })
+
+        //   .on("error", (error) => console.error(error))
+        //   .on("end", () => {
+        //     that.checkPrefixes();
+        //     that.preprocessingMetadataQuadsOntology(tempTTL, position);
+        //   });
+
+        // this.mappingtableFilename = file.name;
+        //   this.refreshMappingtableUI();
+        // }
 
         // Wrong file extension
         else {
@@ -608,7 +674,28 @@ export default {
         }
       };
 
-      reader.readAsText(file);
+      // Read file
+      // TTL
+      if (fileExtension == "csv") {
+        mimeType = "";
+        reader.readAsText(file);
+      }
+      // TTL
+      else if (fileExtension == "ttl") {
+        mimeType = "text/turtle";
+        reader.readAsText(file);
+      }
+      // RDF/XML
+      else if (fileExtension == "rdf" || fileExtension == "xml") {
+        mimeType = "application/rdf+xml";
+        reader.readAsText(file);
+      }
+      // ERROR
+      else {
+        // ERROR;
+      }
+
+      // reader.readAsText(file);
 
       console.groupEnd();
     },
@@ -733,7 +820,7 @@ export default {
       this.selectValue();
     },
 
-    resetArrows() /*OK*/ {
+    resetArrows() /* TODO: Fix reactivity*/ {
       this.treeValueLeft = [];
       this.treeValueRight = [];
     },
