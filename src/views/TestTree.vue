@@ -63,7 +63,11 @@
       </div>
     </div>
     <div class="column is-3">
-      <o-button :label="'(Disabled) Export CSV'" :variant="'disabled'" />
+      <o-button
+        :label="'(work in progress) Export CSV'"
+        @click="exportCSV"
+        :variant="'warning'"
+      />
     </div>
     <div class="column is-3">
       <o-button :label="'(Disabled) Export RDF/XML'" :variant="'disabled'" />
@@ -74,6 +78,20 @@
   </div>
 
   <hr />
+
+  <!-- Debug -->
+  <!-- metadataFromQuad: {{ metadataFromQuad }}  -->
+  <!-- prefixes["target"]: {{ prefixes["target"] }}<br /><br /> -->
+  <div v-for="(items, index) in prefixes['target']" :key="index">
+    {{ index }} : {{ items }}
+  </div>
+  <br /><br />
+
+  metadataFromQuad["target"]:
+  {{ metadataFromQuad["target"] }}
+  <hr />
+
+  <!-- Debug END -->
 
   <!-- TODO: Component mapping table control? -->
   <div class="has-text-centered" @resize="selectValue">
@@ -199,6 +217,9 @@ import AppendGrid from "jquery.appendgrid";
 // RDF
 import rdfParser from "rdf-parse";
 
+// CSV export
+import { json2csv } from "json-2-csv";
+
 export default {
   name: "Editor-Main",
   mixins: [CordraMixin],
@@ -278,6 +299,65 @@ export default {
   },
 
   methods: {
+    // Exports
+    exportCSV() {
+      console.group("exportCSV");
+
+      // let test = json2csv(this.mappingtable, (err, csv) => {
+      //   console.warn("ERROR", err, csv);
+      // });
+
+      // console.log = ("test", test);
+
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      let converter = require("json-2-csv");
+
+      let documents = [
+        {
+          Make: "Nissan",
+          Model: "Murano",
+          Year: "2013",
+          Specifications: {
+            Mileage: "7106",
+            Trim: "S AWD",
+          },
+        },
+        {
+          Make: "BMW",
+          Model: "X5",
+          Year: "2014",
+          Specifications: {
+            Mileage: "3287",
+            Trim: "M",
+          },
+        },
+      ];
+
+      let json2csvCallback = function (err, csv) {
+        if (err) throw err;
+        console.log(csv);
+      };
+
+      converter.json2csv(documents, json2csvCallback);
+
+      console.groupEnd();
+    },
+
+    exportRDF() {
+      console.group("exportRDF");
+      //
+
+      console.groupEnd();
+    },
+
+    exportTTL() {
+      console.group("exportTTL");
+      //
+
+      console.groupEnd();
+    },
+
+    //
     checkPrefixes() /* OK */ {
       /*
           Here you can check the loaded prefixes and fix the data, if necessary 
@@ -288,19 +368,19 @@ export default {
       for (var item in this.prefixes) {
         if (this.prefixes[item].rdf == undefined) {
           this.prefixes[item]["rdf"] = {
-            id: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+            value: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
           };
         }
 
         if (this.prefixes[item].rdfs == undefined) {
           this.prefixes[item]["rdfs"] = {
-            id: "http://www.w3.org/2000/01/rdf-schema#",
+            value: "http://www.w3.org/2000/01/rdf-schema#",
           };
         }
 
         if (this.prefixes[item].owl == undefined) {
           this.prefixes[item]["owl"] = {
-            id: "http://www.w3.org/2002/07/owl#",
+            value: "http://www.w3.org/2002/07/owl#",
           };
         }
       }
@@ -336,36 +416,40 @@ export default {
       */
       // console.group("preprocessingMetadataQuadsOntology()");
       console.group("preprocessingMetadataQuadsOntology", quads);
+      this.metadataFromQuad[position].ontology = {};
       this.metadataFromQuad[position].labels = {};
       this.metadataFromQuad[position].subClassOf = {};
       this.metadataFromQuad[position].class = {};
 
       for (var item of quads) {
-        // Ontology
+        // Ontology (predicate: type, object: Ontology. )
         if (
           item.predicate.value
-            .split(this.prefixes[position].owl.id)
+            .split(this.prefixes[position].rdf.value)
+            .slice(-1)[0] === "type" &&
+          item.object.value
+            .split(this.prefixes[position].owl.value)
             .slice(-1)[0] === "Ontology"
         ) {
-          this.metadataFromQuad[position].subClassOf[item.subject.value] =
-            "Ontology root";
+          this.metadataFromQuad[position].ontology[item.subject.value] =
+            item.subject.value;
         }
 
         // label
         if (
           item.predicate.value
-            .split(this.prefixes[position].rdfs.id)
+            .split(this.prefixes[position].rdfs.value)
             .slice(-1)[0] === "label"
         ) {
-          this.metadataFromQuad[position].labels[item.subject.value] =
-            item.object.value.replaceAll('"', "");
+          this.metadataFromQuad[position].labels[item.subject.id] =
+            item.object.value;
         }
 
         // subClassOf
         else if (
           item.predicate.value
-            .split(this.prefixes[position].rdfs.id)
-            .slice(-1)[0] === "subClassOf"
+            .split(this.prefixes[position].rdfs.value)
+            .slice(-1)[0] === "subClassOf1"
         ) {
           this.metadataFromQuad[position].subClassOf[item.subject.value] =
             item.object.value.replaceAll('"', "");
@@ -374,10 +458,10 @@ export default {
         // Class
         else if (
           item.predicate.value
-            .split(this.prefixes[position].rdf.id)
+            .split(this.prefixes[position].rdf.value)
             .slice(-1)[0] === "type" &&
           item.object.value
-            .split(this.prefixes[position].owl.id)
+            .split(this.prefixes[position].owl.value)
             .slice(-1)[0] == "Class1"
         ) {
           this.metadataFromQuad[position].class[item.subject.value] = "Class";
@@ -385,7 +469,7 @@ export default {
 
         // Leftovers
         else {
-          console.log("Leftover", item.predicate.value);
+          console.log("Leftover", item.predicate.id);
           console.log("Item", item);
         }
       }
@@ -406,11 +490,12 @@ export default {
       // First step
       this[`treeOptions${position}`] = [];
 
-      for (let item in this.metadataFromQuad[position].subClassOf) {
-        tempStructure[item] = {};
-      }
-      for (let item in this.metadataFromQuad[position].class) {
-        tempStructure[item] = {};
+      for (let kind in this.metadataFromQuad[position]) {
+        if (kind == "labels") continue; // only meta
+
+        for (let item in this.metadataFromQuad[position][kind]) {
+          tempStructure[item] = {};
+        }
       }
 
       // Second step
@@ -547,12 +632,9 @@ export default {
       let mimeType = "";
 
       reader.onload = (e, that = this) => {
-        console.log("onload", onload);
-
         this.mappingtable = [];
         this.mappingtableOrig = e.target.result;
         this.mappingtableExtension = fileExtension;
-        console.log("this.mappingtableExtension", this.mappingtableExtension);
 
         /*
          Format mapping compare structure
