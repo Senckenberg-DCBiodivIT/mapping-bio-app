@@ -385,18 +385,15 @@ export default {
 
       console.group("setQuadstore");
 
-      const backend = new MemoryLevel();
-      const df = new DataFactory();
+      // const backend = new MemoryLevel();
+      // const df = new DataFactory();
 
-      this.tree.stores[position] = new Quadstore({ backend, dataFactory: df });
-      const engine = new Engine(this.tree.stores[position]);
+      // this.tree.stores[position] = new Quadstore({ backend, dataFactory: df });
+      // const engine = new Engine(this.tree.stores[position]);
 
-      await this.tree.stores[position].open();
+      // await this.tree.stores[position].open();
 
       //   // Put a single quad into the store using Quadstore's API
-      for (let item of quads) {
-        this.tree.stores[position].put(item);
-      }
 
       // var bindingsStream = await engine.queryBindings("SELECT * {?s ?p ?o}");
       // bindingsStream.on("data", (bindings) => console.log(bindings));
@@ -410,7 +407,9 @@ export default {
       query += "\n?subject rdfs:label ?label .";
       query += "\nFILTER NOT EXISTS { ?subject rdfs:subClassOf ?any }}";
 
-      var bindingsStream = await engine.queryBindings(query);
+      const engineSource = new Engine(this.tree.stores.source);
+
+      var bindingsStream = await engineSource.queryBindings(query);
       bindingsStream.on("data", (bindings) => console.log(bindings));
 
       console.groupEnd();
@@ -434,24 +433,24 @@ export default {
       let mimeType = ""; // "text/turtle" or "application/rdf+xml"
 
       // Reader definition
-      reader.onload = (e, that = this) => {
+      reader.onload = (e) => {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const ontologyStream = require("streamify-string")(e.target.result);
 
-        var tempTTL = [];
-
+        let count = 0;
         rdfParser
           .parse(ontologyStream, {
             contentType: mimeType,
             baseIRI: "http://example.org",
           })
-          .on("data", (quad) => tempTTL.push(quad))
+          .on("data", (quad) => {
+            this.tree.stores[position].put(quad);
+            count += 1;
+            console.log("count", count);
+          })
 
           // TODO: Layout for an error message
-          .on("error", (error) => console.error(error))
-          .on("end", () => {
-            that.setQuadstore(tempTTL, position);
-          });
+          .on("error", (error) => console.error(error));
       };
 
       // Read file
@@ -782,7 +781,7 @@ export default {
   },
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-  mounted() /* OK */ {
+  async mounted() /* OK */ {
     window.mappingDataTable = new AppendGrid({
       element: document.getElementById("mapppingtableCSV"),
       uiFramework: "bulma",
@@ -793,6 +792,21 @@ export default {
       },
     });
     this.refreshMappingtableUI();
+
+    // tree: {
+    //   value: { source: [], target: [] },
+    //   options: { source: [], target: [] },
+    //   stores: { source: {}, target: {} },
+    // },
+
+    const backend = new MemoryLevel();
+    const df = new DataFactory();
+
+    this.tree.stores.source = new Quadstore({ backend, dataFactory: df });
+    this.tree.stores.target = new Quadstore({ backend, dataFactory: df });
+
+    await this.tree.stores.source.open();
+    await this.tree.stores.target.open();
   },
 
   watch: /*OK*/ {
