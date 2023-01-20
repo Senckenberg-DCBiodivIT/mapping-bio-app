@@ -82,13 +82,8 @@
   <!-- Debug -->
   <!-- metadataFromQuad: {{ metadataFromQuad }}  -->
   <!-- prefixes["target"]: {{ prefixes["target"] }}<br /><br /> -->
-  <div v-for="(items, index) in prefixes['target']" :key="index">
-    {{ index }} : {{ items }}
-  </div>
-  <br /><br />
 
-  metadataFromQuad["target"]:
-  {{ metadataFromQuad["target"] }}
+  <br /><br />
   <hr />
 
   <!-- Debug END -->
@@ -156,9 +151,9 @@
       </div>
 
       <treeselect
-        v-model="treeValueLeft"
+        v-model="tree.value.source"
         :multiple="true"
-        :options="treeOptionssource"
+        :options="tree.options.source"
         :always-open="true"
       />
     </div>
@@ -190,9 +185,9 @@
         </label>
       </div>
       <treeselect
-        v-model="treeValueRight"
+        v-model="tree.value.target"
         :multiple="true"
-        :options="treeOptionstarget"
+        :options="tree.options.target"
         :always-open="true"
       />
     </div>
@@ -220,6 +215,12 @@ import rdfParser from "rdf-parse";
 // CSV export
 import { json2csv } from "json-2-csv";
 
+// Quadstore & Co
+import { MemoryLevel } from "memory-level";
+import { DataFactory } from "rdf-data-factory";
+import { Quadstore } from "quadstore";
+import { Engine } from "quadstore-comunica";
+
 export default {
   name: "Editor-Main",
   mixins: [CordraMixin],
@@ -227,12 +228,12 @@ export default {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
     return {
-      prefixes: { source: {}, target: {}, mapping: {} },
-      metadataFromQuad: {
-        source: {},
-        target: {},
-        mapping: {},
-      },
+      // prefixes: { source: {}, target: {}, mapping: {} },
+      // metadataFromQuad: {
+      //   source: {},
+      //   target: {},
+      //   mapping: {},
+      // },
 
       openCloseTableView: true, // false: closed, true: open
 
@@ -278,13 +279,11 @@ export default {
 
       arrows: [],
 
-      // define the default value
-      treeValueLeft: [],
-      treeValueRight: [],
-
-      // define options for the tree view
-      treeOptionssource: [],
-      treeOptionstarget: [],
+      tree: {
+        value: { source: [], target: [] },
+        options: { source: [], target: [] },
+        stores: { source: {}, target: {} },
+      },
 
       dropdownSelectedItem: 0,
       dropdownItems: [
@@ -357,38 +356,6 @@ export default {
       console.groupEnd();
     },
 
-    //
-    checkPrefixes() /* OK */ {
-      /*
-          Here you can check the loaded prefixes and fix the data, if necessary 
-      */
-      console.group("checkPrefixes");
-      console.log("this.prefixes start check", this.prefixes);
-
-      for (var item in this.prefixes) {
-        if (this.prefixes[item].rdf == undefined) {
-          this.prefixes[item]["rdf"] = {
-            value: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-          };
-        }
-
-        if (this.prefixes[item].rdfs == undefined) {
-          this.prefixes[item]["rdfs"] = {
-            value: "http://www.w3.org/2000/01/rdf-schema#",
-          };
-        }
-
-        if (this.prefixes[item].owl == undefined) {
-          this.prefixes[item]["owl"] = {
-            value: "http://www.w3.org/2002/07/owl#",
-          };
-        }
-      }
-
-      console.log("this.prefixes ready", this.prefixes);
-      console.groupEnd();
-    },
-
     mappingtableFromRDF(quads) /*OK*/ {
       console.group("preprocessingMetadataQuadsMappingtable", quads);
       /*
@@ -409,147 +376,42 @@ export default {
       console.groupEnd();
     },
 
-    preprocessingMetadataQuadsOntology(quads, position) /*OK*/ {
-      /*
-          From quads here you go the labels. 
-          Format: {id:label,...}
-      */
-      // console.group("preprocessingMetadataQuadsOntology()");
-      console.group("preprocessingMetadataQuadsOntology", quads);
-      this.metadataFromQuad[position].ontology = {};
-      this.metadataFromQuad[position].labels = {};
-      this.metadataFromQuad[position].subClassOf = {};
-      this.metadataFromQuad[position].class = {};
+    async setQuadstore(quads, position) /**/ {
+      // tree: {
+      //   value: { source: [], target: [] },
+      //   options: { source: [], target: [] },
+      //   stores: { source: {}, target: {} },
+      // },
 
-      for (var item of quads) {
-        // Ontology (predicate: type, object: Ontology. )
-        if (
-          item.predicate.value
-            .split(this.prefixes[position].rdf.value)
-            .slice(-1)[0] === "type" &&
-          item.object.value
-            .split(this.prefixes[position].owl.value)
-            .slice(-1)[0] === "Ontology"
-        ) {
-          this.metadataFromQuad[position].ontology[item.subject.value] =
-            item.subject.value;
-        }
+      console.group("setQuadstore");
 
-        // label
-        if (
-          item.predicate.value
-            .split(this.prefixes[position].rdfs.value)
-            .slice(-1)[0] === "label"
-        ) {
-          this.metadataFromQuad[position].labels[item.subject.id] =
-            item.object.value;
-        }
+      const backend = new MemoryLevel();
+      const df = new DataFactory();
 
-        // subClassOf
-        else if (
-          item.predicate.value
-            .split(this.prefixes[position].rdfs.value)
-            .slice(-1)[0] === "subClassOf1"
-        ) {
-          this.metadataFromQuad[position].subClassOf[item.subject.value] =
-            item.object.value.replaceAll('"', "");
-        }
+      this.tree.stores[position] = new Quadstore({ backend, dataFactory: df });
+      const engine = new Engine(this.tree.stores[position]);
 
-        // Class
-        else if (
-          item.predicate.value
-            .split(this.prefixes[position].rdf.value)
-            .slice(-1)[0] === "type" &&
-          item.object.value
-            .split(this.prefixes[position].owl.value)
-            .slice(-1)[0] == "Class1"
-        ) {
-          this.metadataFromQuad[position].class[item.subject.value] = "Class";
-        }
+      await this.tree.stores[position].open();
 
-        // Leftovers
-        else {
-          console.log("Leftover", item.predicate.id);
-          console.log("Item", item);
-        }
-      }
-      console.log("metadataFromQuad", this.metadataFromQuad);
-
-      this.createTopDownHierarchy(position);
-
-      console.groupEnd();
-    },
-
-    createTopDownHierarchy(position) /*OK*/ {
-      /*
-          Here you use subclasses to create a top-down structure
-      */
-      console.group("createTopDownHierarchy");
-      var tempStructure = {};
-
-      // First step
-      this[`treeOptions${position}`] = [];
-
-      for (let kind in this.metadataFromQuad[position]) {
-        if (kind == "labels") continue; // only meta
-
-        for (let item in this.metadataFromQuad[position][kind]) {
-          tempStructure[item] = {};
-        }
+      //   // Put a single quad into the store using Quadstore's API
+      for (let item of quads) {
+        this.tree.stores[position].put(item);
       }
 
-      // Second step
-      let changeFlag = true;
-      let copy_move = false; // false: copy, true: move
-      while (changeFlag) {
-        changeFlag = false;
+      // var bindingsStream = await engine.queryBindings("SELECT * {?s ?p ?o}");
+      // bindingsStream.on("data", (bindings) => console.log(bindings));
 
-        for (let item in tempStructure) {
-          let parent = this.metadataFromQuad[position].subClassOf[item];
+      // First level visualisation
+      let query =
+        "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> prefix owl: <http://www.w3.org/2002/07/owl#>";
+      query += "\nSELECT ?subject ?label";
+      query += "\nWHERE {";
+      query += "\n?subject a owl:Class .";
+      query += "\n?subject rdfs:label ?label .";
+      query += "\nFILTER NOT EXISTS { ?subject rdfs:subClassOf ?any }}";
 
-          if (parent != undefined && tempStructure[parent] != undefined) {
-            tempStructure[parent][item] = tempStructure[item];
-
-            if (copy_move) delete tempStructure[item];
-
-            copy_move = !copy_move;
-            changeFlag = true;
-          }
-        }
-      }
-
-      // Tree Structure
-      var testStructForTheTree = [];
-
-      var traverseStructure = (
-        item,
-        source,
-        position,
-        metadata = this.metadataFromQuad[position]
-      ) => {
-        var currentState = {
-          id: `${item}_${position}`,
-          label: metadata.labels[item],
-        };
-
-        if (Object.keys(source).length > 0) currentState["children"] = [];
-        for (var childNode in source) {
-          currentState["children"].push(
-            traverseStructure(childNode, source[childNode], position)
-          );
-        }
-
-        return currentState;
-      };
-
-      // Step 1. Check if there's more than one root.
-      for (let item in tempStructure) {
-        // Step 2. Create the scructure
-        testStructForTheTree.push(
-          traverseStructure(item, tempStructure[item], position)
-        );
-      }
-      this[`treeOptions${position}`] = testStructForTheTree;
+      var bindingsStream = await engine.queryBindings(query);
+      bindingsStream.on("data", (bindings) => console.log(bindings));
 
       console.groupEnd();
     },
@@ -557,6 +419,8 @@ export default {
     loadOntology(event, position) /*OK*/ {
       console.group("loadOntology", position);
 
+      // reset the widget
+      this[`value${position}`] = [];
       this[`options${position}`] = [];
 
       // Load a local file
@@ -567,33 +431,26 @@ export default {
         .toLowerCase();
 
       var reader = new FileReader();
-      let mimeType = "";
+      let mimeType = ""; // "text/turtle" or "application/rdf+xml"
+
       // Reader definition
       reader.onload = (e, that = this) => {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const ontologyStream = require("streamify-string")(e.target.result);
 
         var tempTTL = [];
-        that.prefixes[position] = {};
-        // console.log("mimeType: ", mimeType);
+
         rdfParser
           .parse(ontologyStream, {
-            // contentType: ,
             contentType: mimeType,
             baseIRI: "http://example.org",
           })
           .on("data", (quad) => tempTTL.push(quad))
 
-          .on("prefix", (prefix, iri) => {
-            // console.log(`${prefix} : ${iri}`);
-            // console.dir(Object.keys(iri));
-            that.prefixes[position][prefix] = iri;
-          })
-
+          // TODO: Layout for an error message
           .on("error", (error) => console.error(error))
           .on("end", () => {
-            that.checkPrefixes();
-            that.preprocessingMetadataQuadsOntology(tempTTL, position);
+            that.setQuadstore(tempTTL, position);
           });
       };
 
@@ -610,7 +467,7 @@ export default {
       }
       // ERROR
       else {
-        //ERROR
+        // TODO: ERROR
       }
 
       console.groupEnd();
@@ -788,9 +645,9 @@ export default {
   */
       console.group("addMapping");
 
-      if (this.treeValueLeft.length > 0 && this.treeValueRight.length > 0) {
-        for (var left of this.treeValueLeft) {
-          for (var right of this.treeValueRight) {
+      if (this.treeValuesource.length > 0 && this.treeValuetarget.length > 0) {
+        for (var left of this.treeValuesource) {
+          for (var right of this.treeValuetarget) {
             if (this.mappingtable[left] == undefined) {
               this.mappingtable[left] = {};
             }
@@ -838,9 +695,12 @@ export default {
 
       var allDivs = document.getElementsByTagName("*");
 
-      if (this.treeValueLeft.length > 0 && this.treeValueRight.length > 0) {
-        for (var left of this.treeValueLeft) {
-          for (var right of this.treeValueRight) {
+      if (
+        this.tree.value.source.length > 0 &&
+        this.tree.value.target.length > 0
+      ) {
+        for (var left of this.tree.value.source) {
+          for (var right of this.tree.value.target) {
             var from = null,
               to = null;
 
@@ -903,8 +763,8 @@ export default {
     },
 
     resetArrows() /* TODO: Fix reactivity*/ {
-      this.treeValueLeft = [];
-      this.treeValueRight = [];
+      // this.tree.value.source = [];
+      // this.tree.value.target = [];
     },
   },
 
@@ -943,7 +803,7 @@ export default {
       deep: true,
     },
 
-    treeValueRight: {
+    treeValuetarget: {
       handler() {
         this.selectValue();
       },
