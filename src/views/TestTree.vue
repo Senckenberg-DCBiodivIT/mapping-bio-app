@@ -216,10 +216,11 @@ import rdfParser from "rdf-parse";
 import { json2csv } from "json-2-csv";
 
 // Quadstore & Co
-import { MemoryLevel } from "memory-level";
-import { DataFactory } from "rdf-data-factory";
-import { Quadstore } from "quadstore";
 import { Engine } from "quadstore-comunica";
+
+// TEST
+import { storeStream } from "rdf-store-stream";
+import { query } from "@/components/query";
 
 export default {
   name: "Editor-Main",
@@ -282,8 +283,12 @@ export default {
       tree: {
         value: { source: [], target: [] },
         options: { source: [], target: [] },
-        stores: { source: {}, target: {} },
       },
+
+      rdfObj: {
+        engines: { source: {}, target: {}, mapping: {} },
+      },
+      query: query, // external stored queries for a better readability
 
       dropdownSelectedItem: 0,
       dropdownItems: [
@@ -376,51 +381,36 @@ export default {
       console.groupEnd();
     },
 
-    async setQuadstore(quads, position) /**/ {
-      // tree: {
-      //   value: { source: [], target: [] },
-      //   options: { source: [], target: [] },
-      //   stores: { source: {}, target: {} },
-      // },
+    async loadRDFChildren(id, position) {
+      console.group("loadRDFChildren", id, position);
+      var result = [];
 
-      console.group("setQuadstore");
+      // Check superclass
+      // var query = "SELECT * {?s ?p ?o}";
+      var query = this.query.subclassOf.replace("ID_HERE", id);
 
-      // const backend = new MemoryLevel();
-      // const df = new DataFactory();
+      console.log("query", query);
+      var bindingsStream = await this.rdfObj.engines[position].queryBindings(
+        query
+      );
 
-      // this.tree.stores[position] = new Quadstore({ backend, dataFactory: df });
-      // const engine = new Engine(this.tree.stores[position]);
+      // Get id and name
+      bindingsStream.on("data", (bindings) => {
+        console.log("\n\nbindings recursive", bindings);
+      });
 
-      // await this.tree.stores[position].open();
-
-      //   // Put a single quad into the store using Quadstore's API
-
-      // var bindingsStream = await engine.queryBindings("SELECT * {?s ?p ?o}");
-      // bindingsStream.on("data", (bindings) => console.log(bindings));
-
-      // First level visualisation
-      let query =
-        "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> prefix owl: <http://www.w3.org/2002/07/owl#>";
-      query += "\nSELECT ?subject ?label";
-      query += "\nWHERE {";
-      query += "\n?subject a owl:Class .";
-      query += "\n?subject rdfs:label ?label .";
-      query += "\nFILTER NOT EXISTS { ?subject rdfs:subClassOf ?any }}";
-
-      const engineSource = new Engine(this.tree.stores.source);
-
-      var bindingsStream = await engineSource.queryBindings(query);
-      bindingsStream.on("data", (bindings) => console.log(bindings));
+      // Check for Children
 
       console.groupEnd();
+      return result;
     },
 
-    loadOntology(event, position) /*OK*/ {
+    async loadOntology(event, position) /**/ {
       console.group("loadOntology", position);
 
       // reset the widget
-      this[`value${position}`] = [];
-      this[`options${position}`] = [];
+      this.tree.value[position] = [];
+      this.tree.options[position] = [];
 
       // Load a local file
       var file = event.target.files[0];
@@ -433,24 +423,41 @@ export default {
       let mimeType = ""; // "text/turtle" or "application/rdf+xml"
 
       // Reader definition
-      reader.onload = (e) => {
+      reader.onload = async (e, that = this) => {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const ontologyStream = require("streamify-string")(e.target.result);
 
-        let count = 0;
-        rdfParser
-          .parse(ontologyStream, {
-            contentType: mimeType,
-            baseIRI: "http://example.org",
-          })
-          .on("data", (quad) => {
-            this.tree.stores[position].put(quad);
-            count += 1;
-            console.log("count", count);
-          })
+        const quadStream = rdfParser.parse(ontologyStream, {
+          contentType: mimeType,
+          baseIRI: "http://example.org",
+        });
 
-          // TODO: Layout for an error message
-          .on("error", (error) => console.error(error));
+        const store = await storeStream(quadStream);
+        that.rdfObj.engines[position] = new Engine(store);
+
+        // First level visualisation
+
+        var bindingsStream = await that.rdfObj.engines[position].queryBindings(
+          that.query.firstLevelClass
+        );
+
+        bindingsStream.on("data", (bindings) => {
+          const id =
+            bindings.entries.hashmap.node.children[0].value.id.replaceAll(
+              '"',
+              ""
+            );
+          that.tree.options[position].push({
+            id: id,
+            label:
+              bindings.entries.hashmap.node.children[1].value.id.replaceAll(
+                '"',
+                ""
+              ),
+          });
+          that.loadRDFChildren(id, position);
+        });
+        bindingsStream.on("end", () => console.log("ready"));
       };
 
       // Read file
@@ -792,21 +799,6 @@ export default {
       },
     });
     this.refreshMappingtableUI();
-
-    // tree: {
-    //   value: { source: [], target: [] },
-    //   options: { source: [], target: [] },
-    //   stores: { source: {}, target: {} },
-    // },
-
-    const backend = new MemoryLevel();
-    const df = new DataFactory();
-
-    this.tree.stores.source = new Quadstore({ backend, dataFactory: df });
-    this.tree.stores.target = new Quadstore({ backend, dataFactory: df });
-
-    await this.tree.stores.source.open();
-    await this.tree.stores.target.open();
   },
 
   watch: /*OK*/ {
