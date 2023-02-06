@@ -318,12 +318,12 @@ export default {
         csv += "\n";
       });
 
-      var hiddenElement = document.createElement("a");
-      hiddenElement.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
-      hiddenElement.target = "_blank";
+      var csvElement = document.createElement("a");
+      csvElement.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+      csvElement.target = "_blank";
 
-      hiddenElement.download = "Mapping_Table.csv";
-      hiddenElement.click();
+      csvElement.download = "Mapping_Table.csv";
+      csvElement.click();
 
       console.groupEnd();
     },
