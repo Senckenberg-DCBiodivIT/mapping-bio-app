@@ -35,7 +35,7 @@
   </section>
   <br /><br />
 
-  <!-- Buttons "Load" and "Download CSV" -->
+  <!-- Buttons "Load" ... "Download CSV" -->
   <div class="columns has-text-centered">
     <div class="column is-3">
       <div
@@ -54,7 +54,7 @@
             <span class="file-icon">
               <i class="fas fa-upload"></i>
             </span>
-            <span class="file-label">Choose a CSV or RDF file...</span>
+            <span class="file-label">Choose a mapping file...</span>
           </span>
           <span class="file-name" v-if="hasMappingFileName"
             >{{ mappingtableFilename }}
@@ -63,14 +63,10 @@
       </div>
     </div>
     <div class="column is-3">
-      <o-button
-        :label="'(work in progress) Export CSV'"
-        @click="exportCSV"
-        :variant="'warning'"
-      />
+      <o-button :label="'Export CSV'" @click="exportCSV" :variant="'primary'" />
     </div>
     <div class="column is-3">
-      <o-button :label="'(Disabled) Export RDF/XML'" :variant="'disabled'" />
+      <o-button :label="'(in progress) Export RDF/XML'" :variant="'warning'" />
     </div>
     <div class="column is-3">
       <o-button :label="'(Disabled) Export TTL'" :variant="'disabled'" />
@@ -212,13 +208,8 @@ import AppendGrid from "jquery.appendgrid";
 // RDF
 import rdfParser from "rdf-parse";
 
-// CSV export
-import { json2csv } from "json-2-csv";
-
 // Quadstore & Co
 import { Engine } from "quadstore-comunica";
-
-// TEST
 import { storeStream } from "rdf-store-stream";
 import { query } from "@/components/query";
 
@@ -243,7 +234,7 @@ export default {
           name: "relation",
           display: "Relation",
           type: "select",
-          ctrlOptions: ["", "(=)", "<", ">"],
+          ctrlOptions: ["", "=", "<", ">"],
         },
 
         {
@@ -307,42 +298,32 @@ export default {
     exportCSV() {
       console.group("exportCSV");
 
-      // let test = json2csv(this.mappingtable, (err, csv) => {
-      //   console.warn("ERROR", err, csv);
-      // });
+      var currentState = [];
+      for (var idxSource in this.mappingtable) {
+        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
+          currentState.push([
+            this.mappingtable[idxSource][idxTarget]["relation"],
+            this.mappingtable[idxSource][idxTarget]["sourceTitle"],
+            idxSource,
+            this.mappingtable[idxSource][idxTarget]["targetTitle"],
+            idxTarget,
+            this.mappingtable[idxSource][idxTarget]["comment"],
+          ]);
+        }
+      }
+      var csv = "";
 
-      // console.log = ("test", test);
+      currentState.forEach(function (row) {
+        csv += row.join(",");
+        csv += "\n";
+      });
 
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      let converter = require("json-2-csv");
+      var hiddenElement = document.createElement("a");
+      hiddenElement.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+      hiddenElement.target = "_blank";
 
-      let documents = [
-        {
-          Make: "Nissan",
-          Model: "Murano",
-          Year: "2013",
-          Specifications: {
-            Mileage: "7106",
-            Trim: "S AWD",
-          },
-        },
-        {
-          Make: "BMW",
-          Model: "X5",
-          Year: "2014",
-          Specifications: {
-            Mileage: "3287",
-            Trim: "M",
-          },
-        },
-      ];
-
-      let json2csvCallback = function (err, csv) {
-        if (err) throw err;
-        console.log(csv);
-      };
-
-      converter.json2csv(documents, json2csvCallback);
+      hiddenElement.download = "Mapping_Table.csv";
+      hiddenElement.click();
 
       console.groupEnd();
     },
@@ -361,51 +342,51 @@ export default {
       console.groupEnd();
     },
 
-    mappingtableFromRDF(quads) /*OK*/ {
-      console.group("preprocessingMetadataQuadsMappingtable", quads);
-      /*
-         Format mapping compare structure
-         {
-          "source link":{
-            "target link":{
-              "sourceTitle","targetTitle", "relation", "comment"
-            }
-          }
-         }
-         */
+    // mappingtableFromRDF(quads) /*OK*/ {
+    //   console.group("preprocessingMetadataQuadsMappingtable", quads);
+    //   /*
+    //      Format mapping compare structure
+    //      {
+    //       "source link":{
+    //         "target link":{
+    //           "sourceTitle","targetTitle", "relation", "comment"
+    //         }
+    //       }
+    //      }
+    //      */
 
-      for (var item in quads) {
-        console.log("item", item);
-      }
+    //   for (var item in quads) {
+    //     console.log("item", item);
+    //   }
 
-      console.groupEnd();
-    },
+    //   console.groupEnd();
+    // },
 
-    async loadRDFChildren(id, position) {
-      console.group("loadRDFChildren", id, position);
-      var result = [];
+    // async loadRDFChildren(id, position) {
+    //   console.group("loadRDFChildren", id, position);
+    //   var result = [];
 
-      // Check superclass
-      // var query = "SELECT * {?s ?p ?o}";
-      var query = this.query.subclassOf.replace("ID_HERE", id);
+    //   // Check superclass
+    //   // var query = "SELECT * {?s ?p ?o}";
+    //   var query = this.query.subclassOf.replace("ID_HERE", id);
 
-      console.log("query", query);
-      var bindingsStream = await this.rdfObj.engines[position].queryBindings(
-        query
-      );
+    //   console.log("query", query);
+    //   var bindingsStream = await this.rdfObj.engines[position].queryBindings(
+    //     query
+    //   );
 
-      // Get id and name
-      bindingsStream.on("data", (bindings) => {
-        console.log("\n\nbindings recursive", bindings);
-      });
+    //   // Get id and name
+    //   bindingsStream.on("data", (bindings) => {
+    //     console.log("\n\nbindings recursive", bindings);
+    //   });
 
-      // Check for Children
+    //   // Check for Children
 
-      console.groupEnd();
-      return result;
-    },
+    //   console.groupEnd();
+    //   return result;
+    // },
 
-    async loadOntology(event, position) /**/ {
+    loadOntology(event, position) /**/ {
       console.group("loadOntology", position);
 
       // reset the widget
@@ -481,7 +462,7 @@ export default {
 
     loadMappingTable(event) {
       /*
-          Here you can load a mapping table as a CSV or RDF(XML) file
+          Here you can load a mapping table as a CSV, RDF(XML) or turtle file
       */
       console.group("loadMappingTable, event:", event);
 
@@ -494,7 +475,7 @@ export default {
       let reader = new FileReader();
       let mimeType = "";
 
-      reader.onload = (e, that = this) => {
+      reader.onload = async (e) => {
         this.mappingtable = [];
         this.mappingtableOrig = e.target.result;
         this.mappingtableExtension = fileExtension;
@@ -548,68 +529,57 @@ export default {
           this.mappingtableExtension === "xml" ||
           this.mappingtableExtension === "ttl"
         ) {
-          console.log("RDF selected");
+          console.log("RDF or TTL selected");
+
+          // Reader definition
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           const ontologyStream = require("streamify-string")(e.target.result);
 
-          var tempRDF = [];
-          that.prefixes["mapping"] = {};
-          console.log("mimeType: ", mimeType);
-          rdfParser
-            .parse(ontologyStream, {
-              // contentType: ,
-              contentType: mimeType,
-              baseIRI: "http://example.org",
-            })
-            .on("data", (quad) => tempRDF.push(quad))
+          const quadStream = rdfParser.parse(ontologyStream, {
+            contentType: mimeType,
+            baseIRI: "http://example.org",
+          });
 
-            .on("prefix", (prefix, iri) => {
-              console.log(`${prefix} : ${iri}`);
-              console.dir(Object.keys(iri));
-              that.prefixes["mapping"][prefix] = iri;
-            })
+          const store = await storeStream(quadStream);
+          this.rdfObj.engines["mapping"] = new Engine(store);
 
-            .on("error", (error) => console.error(error))
-            .on("end", () => {
-              that.checkPrefixes();
-              that.mappingtableFromRDF(tempRDF);
-            });
+          var bindingsStream = await this.rdfObj.engines[
+            "mapping"
+          ].queryBindings(this.query.mappingRow);
 
-          this.mappingtableFilename = file.name;
-          this.refreshMappingtableUI();
+          bindingsStream.on("data", (bindings) => {
+            // console.log("bindings", bindings);
+            console.log(
+              "bindings.entries.hashmap.node",
+              bindings.entries.hashmap.node
+            );
+
+            if (
+              this.mappingtable[
+                bindings.entries.hashmap.node.children[0].value.value
+              ] == undefined
+            ) {
+              this.mappingtable[
+                bindings.entries.hashmap.node.children[0].value.value
+              ] = {};
+            }
+            this.mappingtable[
+              bindings.entries.hashmap.node.children[0].value.value
+            ][bindings.entries.hashmap.node.children[1].value.value] = {
+              sourceTitle: "Enter a title for the CSV export here",
+              targetTitle: "Enter a title for the CSV export here",
+              relation: bindings.entries.hashmap.node.children[2].value.value,
+              comment: "Enter a comment for the CSV export here",
+            };
+          });
+
+          bindingsStream.on("end", (bindings) => {
+            console.log("this.mappingtable", this.mappingtable);
+
+            this.mappingtableFilename = file.name;
+            this.refreshMappingtableUI();
+          });
         }
-
-        // TTL(Turtle)
-        // else if (this.mappingtableExtension === "ttl") {
-        // // eslint-disable-next-line @typescript-eslint/no-var-requires
-        // const ontologyStream = require("streamify-string")(e.target.result);
-
-        // var tempTTL = [];
-        // that.prefixes[position] = {};
-        // // console.log("mimeType: ", mimeType);
-        // rdfParser
-        //   .parse(ontologyStream, {
-        //     // contentType: ,
-        //     contentType: mimeType,
-        //     baseIRI: "http://example.org",
-        //   })
-        //   .on("data", (quad) => tempTTL.push(quad))
-
-        //   .on("prefix", (prefix, iri) => {
-        //     // console.log(`${prefix} : ${iri}`);
-        //     // console.dir(Object.keys(iri));
-        //     that.prefixes[position][prefix] = iri;
-        //   })
-
-        //   .on("error", (error) => console.error(error))
-        //   .on("end", () => {
-        //     that.checkPrefixes();
-        //     that.preprocessingMetadataQuadsOntology(tempTTL, position);
-        //   });
-
-        // this.mappingtableFilename = file.name;
-        //   this.refreshMappingtableUI();
-        // }
 
         // Wrong file extension
         else {
@@ -743,7 +713,9 @@ export default {
       for (var idxSource in this.mappingtable) {
         for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
           currentState.push({
-            relation: this.mappingtable[idxSource][idxTarget]["relation"],
+            relation: this.mappingtable[idxSource][idxTarget]["relation"]
+              .replaceAll("(", "")
+              .replaceAll(")", ""),
             sourceTitle: this.mappingtable[idxSource][idxTarget]["sourceTitle"],
             sourceLink: idxSource,
             targetTitle: this.mappingtable[idxSource][idxTarget]["targetTitle"],
@@ -799,6 +771,61 @@ export default {
       },
     });
     this.refreshMappingtableUI();
+
+    // this.tree = {
+    //   value: { source: [1, 2, 3, 4, 5, 6], target: [] },
+    //   options: {
+    //     source: [
+    //       { label: "leaf alternate placement", id: 1 },
+    //       { label: "perianth color", id: 6 },
+
+    //       { label: "fruit pilosity", id: 5 },
+    //       { label: "whole plant lifestyle", id: 2 },
+
+    //       { label: "leaf morphology", id: 3 },
+
+    //       { label: "stamen morphology", id: 4 },
+    //     ],
+
+    //     target: [
+    //       { label: "life cycle habit", id: 8 },
+    //       { label: "fruit hairiness", id: 11 },
+    //       { label: "phyllotaxy", id: 7 },
+    //       { label: "microsporophyll morphlogy trait", id: 10 },
+    //       { label: "tepal color", id: 12 },
+    //       { label: "leaf morphology trait", id: 9 },
+    //     ],
+    //   },
+    // };
+
+    // function callback() {
+    //   var allDivs = document.getElementsByTagName("*");
+    //   for (var left of [1, 2, 3, 4, 5, 6]) {
+    //     var from = null,
+    //       to = null;
+    //     var temp = left + 6;
+    //     for (var singleDiv of allDivs) {
+    //       console.log("left", left);
+    //       if (singleDiv.getAttribute("data-id") == left) {
+    //         from = singleDiv;
+    //       } else if (singleDiv.getAttribute("data-id") == `${temp}`) {
+    //         to = singleDiv;
+    //       }
+
+    //       if (from != null && to != null) {
+    //         new LeaderLine(from, to);
+    //         from = null;
+    //         to = null;
+    //         break;
+    //       }
+    //     }
+    //   }
+    // }
+
+    // setTimeout(function () {
+    //   console.log("Callback Funktion wird aufgerufen");
+    //   callback(this.tree);
+    // }, 2000);
   },
 
   watch: /*OK*/ {
