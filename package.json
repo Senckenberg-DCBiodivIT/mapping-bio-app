@@ -22,7 +22,6 @@
     "graphy": "^4.3.5",
     "https-browserify": "^1.0.0",
     "jquery.appendgrid": "^2.1.1",
-    "json-2-csv": "^3.18.0",
     "keycloak-js": "^15.0.2",
     "leader-line-new": "^1.1.9",
     "quadstore-comunica": "^3.0.8",
