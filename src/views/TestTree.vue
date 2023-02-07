@@ -74,25 +74,18 @@
   </div>
 
   <hr />
-
   <!-- Debug -->
   <!-- metadataFromQuad: {{ metadataFromQuad }}  -->
   <!-- prefixes["target"]: {{ prefixes["target"] }}<br /><br /> -->
-
-  <br /><br />
+  <br />
   <hr />
-
   <!-- Debug END -->
 
   <!-- TODO: Component mapping table control? -->
   <div class="has-text-centered" @resize="selectValue">
     <o-field label="Select mapping relation:" variant="">
-      <o-dropdown
-        aria-role="list"
-        v-model="dropdownSelectedItem"
-        :disabled="disableDropDown"
-        @change="setTaxonID"
-      >
+      <o-dropdown aria-role="list" v-model="dropdownSelectedItem">
+        >
         <template #trigger="{ active }">
           <o-button variant="primary">
             <span>{{ dropdownItems[dropdownSelectedItem] }}</span>
@@ -138,7 +131,7 @@
             <span class="file-icon">
               <i class="fas fa-upload"></i>
             </span>
-            <span class="file-label">Choose an RDF/XML or TTL file…</span>
+            <span class="file-label">Choose a RDF/XML or TTL file…</span>
           </span>
           <span class="file-name" v-if="hasSourceFileName"
             >{{ sourceFilename }}
@@ -150,7 +143,8 @@
         v-model="tree.value.source"
         :multiple="true"
         :options="tree.options.source"
-        :always-open="true"
+        :alwaysOpen="true"
+        :open-direction="'below'"
       />
     </div>
     <div class="column" />
@@ -173,7 +167,7 @@
             <span class="file-icon">
               <i class="fas fa-upload"></i>
             </span>
-            <span class="file-label">Choose an RDF/XML or TTL file…</span>
+            <span class="file-label">Choose a RDF/XML or TTL file…</span>
           </span>
           <span class="file-name" v-if="hasTargetFileName"
             >{{ targetFilename }}
@@ -184,7 +178,8 @@
         v-model="tree.value.target"
         :multiple="true"
         :options="tree.options.target"
-        :always-open="true"
+        :alwaysOpen="true"
+        :open-direction="'bottom'"
       />
     </div>
   </div>
@@ -295,7 +290,7 @@ export default {
 
   methods: {
     // Exports
-    exportCSV() {
+    exportCSV() /*(OK)*/ {
       console.group("exportCSV");
 
       var currentState = [];
@@ -436,9 +431,17 @@ export default {
                 ""
               ),
           });
-          that.loadRDFChildren(id, position);
         });
-        bindingsStream.on("end", () => console.log("ready"));
+        bindingsStream.on("end", () => {
+          var treesToHandle = document.getElementsByClassName(
+            "vue-treeselect__menu"
+          );
+          console.log("check relements CSS", treesToHandle);
+          for (var item of treesToHandle) {
+            item.style.removeProperty("max-height");
+          }
+          console.log("ready");
+        });
       };
 
       // Read file
@@ -842,13 +845,6 @@ export default {
       },
       deep: true,
     },
-
-    // openCloseTableView: {
-    //   handler() {
-    //     this.selectValue();
-    //   },
-    //   deep: true,
-    // },
   },
 };
 </script>
