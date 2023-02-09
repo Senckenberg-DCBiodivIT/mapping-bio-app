@@ -629,16 +629,16 @@ export default {
         this.tree.value.source.length > 0 &&
         this.tree.value.target.length > 0
       ) {
-        var sourceTitle = document
-          .querySelectorAll(`[data-id='${this.tree.value.source}']`)[0]
-          .getElementsByTagName("label")[0].innerText;
-
-        var targetTitle = document
-          .querySelectorAll(`[data-id='${this.tree.value.target}']`)[0]
-          .getElementsByTagName("label")[0].innerText;
-
         for (var left of this.tree.value.source) {
           for (var right of this.tree.value.target) {
+            var sourceTitle = document
+              .querySelectorAll(`[data-id='${left}']`)[0]
+              .getElementsByTagName("label")[0].innerText;
+
+            var targetTitle = document
+              .querySelectorAll(`[data-id='${right}']`)[0]
+              .getElementsByTagName("label")[0].innerText;
+
             if (this.mappingtable[left] == undefined) {
               this.mappingtable[left] = {};
             }
