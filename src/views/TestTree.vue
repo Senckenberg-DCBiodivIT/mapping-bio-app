@@ -76,16 +76,16 @@
   <hr />
   <!-- Debug -->
   <!-- metadataFromQuad: {{ metadataFromQuad }}  -->
-  <!-- prefixes["target"]: {{ prefixes["target"] }}<br /><br /> -->
-  <br />
-  <hr />
+  <!-- <br />
+  <hr /> -->
   <!-- Debug END -->
 
   <!-- TODO: Component mapping table control? -->
+
+  dropdownItems: {{ dropdownItems }}
   <div class="has-text-centered" @resize="selectValue">
     <o-field label="Select mapping relation:" variant="">
       <o-dropdown aria-role="list" v-model="dropdownSelectedItem">
-        >
         <template #trigger="{ active }">
           <o-button variant="primary">
             <span>{{ dropdownItems[dropdownSelectedItem] }}</span>
@@ -215,13 +215,6 @@ export default {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
     return {
-      // prefixes: { source: {}, target: {}, mapping: {} },
-      // metadataFromQuad: {
-      //   source: {},
-      //   target: {},
-      //   mapping: {},
-      // },
-
       openCloseTableView: true, // false: closed, true: open
 
       mappingDataTableConfig: [
@@ -285,6 +278,15 @@ export default {
         "skos:narrowMatch",
         "skos:relatedMatch",
       ],
+      dropdownItemsMatching: {
+        // TODO: ask Claus about...
+        // "skos:mappingRelation",
+        "skos:closeMatch": { rdf: 0.65, csv: "" },
+        "skos:exactMatch": { rdf: 1, csv: "(=)" },
+        "skos:broadMatch": { rdf: 0.75, csv: ">" },
+        "skos:narrowMatch": { rdf: 0.65, csv: "<" },
+        "skos:relatedMatch": { rdf: 0.5, csv: "" },
+      },
     };
   },
 
@@ -422,7 +424,7 @@ export default {
             bindings.entries.hashmap.node.children[0].value.id.replaceAll(
               '"',
               ""
-            );
+            ) + `_${position}`;
           that.tree.options[position].push({
             id: id,
             label:
@@ -436,7 +438,6 @@ export default {
           var treesToHandle = document.getElementsByClassName(
             "vue-treeselect__menu"
           );
-          console.log("check relements CSS", treesToHandle);
           for (var item of treesToHandle) {
             item.style.removeProperty("max-height");
           }
@@ -624,28 +625,31 @@ export default {
   */
       console.group("addMapping");
 
-      if (this.treeValuesource.length > 0 && this.treeValuetarget.length > 0) {
-        for (var left of this.treeValuesource) {
-          for (var right of this.treeValuetarget) {
+      if (
+        this.tree.value.source.length > 0 &&
+        this.tree.value.target.length > 0
+      ) {
+        var sourceTitle = document
+          .querySelectorAll(`[data-id='${this.tree.value.source}']`)[0]
+          .getElementsByTagName("label")[0].innerText;
+
+        var targetTitle = document
+          .querySelectorAll(`[data-id='${this.tree.value.target}']`)[0]
+          .getElementsByTagName("label")[0].innerText;
+
+        for (var left of this.tree.value.source) {
+          for (var right of this.tree.value.target) {
             if (this.mappingtable[left] == undefined) {
               this.mappingtable[left] = {};
             }
 
-            console.log("left", left);
-            console.log(
-              "right",
-              this.metadataFromQuad.target.labels[right.replace("_target", "")]
-            );
             this.mappingtable[left][right] = {
-              sourceTitle:
-                this.metadataFromQuad.source.labels[
-                  left.replace("_source", "")
-                ],
-              targetTitle:
-                this.metadataFromQuad.target.labels[
-                  right.replace("_target", "")
-                ],
-              relation: "", // TODO: set the selected relation, but current we have different valuer in CSV ans RDF...
+              sourceTitle: sourceTitle,
+              targetTitle: targetTitle,
+              relation:
+                this.dropdownItemsMatching[
+                  this.dropdownItems[this.dropdownSelectedItem]
+                ].csv, // TODO: set the selected relation, but current we have different values in CSV and RDF...
               comment: "",
             };
           }
@@ -666,40 +670,39 @@ export default {
           Here you check current selection of the ontologies and
           rewrite the arrows each call
       */
+      console.group("selectValue");
 
       for (var arrow of this.arrows) {
         arrow.remove();
       }
       this.arrows = [];
 
-      var allDivs = document.getElementsByTagName("*");
-
       if (
         this.tree.value.source.length > 0 &&
         this.tree.value.target.length > 0
       ) {
         for (var left of this.tree.value.source) {
+          console.log("loop left");
+
           for (var right of this.tree.value.target) {
-            var from = null,
+            console.log("loop right");
+            var from = document.querySelectorAll(`[data-id='${left}']`)[0];
+
+            var to = document.querySelectorAll(`[data-id='${right}']`)[0];
+
+            console.log("from", from);
+            console.log("to", to);
+
+            if (from != null && to != null) {
+              this.arrows.push(new LeaderLine(from, to));
+              from = null;
               to = null;
-
-            for (var singleDiv of allDivs) {
-              if (singleDiv.getAttribute("data-id") == left) {
-                from = singleDiv;
-              } else if (singleDiv.getAttribute("data-id") == right) {
-                to = singleDiv;
-              }
-
-              if (from != null && to != null) {
-                this.arrows.push(new LeaderLine(from, to));
-                from = null;
-                to = null;
-                break;
-              }
             }
           }
         }
       }
+
+      console.groupEnd();
     },
 
     refreshMappingtableUI() /* OK */ {
@@ -711,7 +714,7 @@ export default {
             - create a new
             - or delete a relation between two ontologies
       */
-
+      console.group("refreshMappingtableUI");
       var currentState = [];
       for (var idxSource in this.mappingtable) {
         for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
@@ -738,9 +741,8 @@ export default {
           comment: "",
         });
       }
-      // this.resetArrows();
       window.mappingDataTable.load(currentState);
-      this.selectValue();
+      console.groupEnd();
     },
 
     resetArrows() /* TODO: Fix reactivity*/ {
