@@ -81,8 +81,6 @@
   <!-- Debug END -->
 
   <!-- TODO: Component mapping table control? -->
-
-  dropdownItems: {{ dropdownItems }}
   <div class="has-text-centered" @resize="selectValue">
     <o-field label="Select mapping relation:" variant="">
       <o-dropdown aria-role="list" v-model="dropdownSelectedItem">
@@ -145,6 +143,7 @@
         :options="tree.options.source"
         :alwaysOpen="true"
         :open-direction="'below'"
+        :load-options="loadOntologyChild"
       />
     </div>
     <div class="column" />
@@ -180,6 +179,7 @@
         :options="tree.options.target"
         :alwaysOpen="true"
         :open-direction="'bottom'"
+        :load-options="loadOntologyChild"
       />
     </div>
   </div>
@@ -414,7 +414,6 @@ export default {
         that.rdfObj.engines[position] = new Engine(store);
 
         // First level visualisation
-
         var bindingsStream = await that.rdfObj.engines[position].queryBindings(
           that.query.firstLevelClass
         );
@@ -432,6 +431,8 @@ export default {
                 '"',
                 ""
               ),
+            children: null,
+            position: position, // for the sparql engine
           });
         });
         bindingsStream.on("end", () => {
@@ -460,6 +461,45 @@ export default {
       else {
         // TODO: ERROR
       }
+
+      console.groupEnd();
+    },
+
+    async loadOntologyChild(param) {
+      console.group("loadOntologyChild", param);
+      var tempChild = [];
+
+      var id = param.parentNode.id
+        .replace("_source", "")
+        .replace("_target", "");
+
+      var position = param.parentNode.position;
+      var parentNode = param.parentNode;
+
+      var query = this.query.subclassOf.replaceAll("ID_HERE", id);
+
+      var bindingsStream = await this.rdfObj.engines[position].queryBindings(
+        query
+      );
+
+      bindingsStream.on("data", (bindings) => {
+        console.log("bindings", bindings);
+        const childID =
+          bindings.entries.hashmap.node.value.id.replaceAll('"', "") +
+          `_${position}`;
+        tempChild.push({
+          id: childID,
+          label: bindings.entries.hashmap.node.value.id.replaceAll('"', ""),
+          children: null,
+          position: position, // for the sparql engine
+        });
+      });
+
+      bindingsStream.on("end", () => {
+        console.log("tempChild", tempChild[0]);
+        parentNode.children = tempChild;
+        param.callback();
+      });
 
       console.groupEnd();
     },
@@ -553,10 +593,10 @@ export default {
 
           bindingsStream.on("data", (bindings) => {
             // console.log("bindings", bindings);
-            console.log(
-              "bindings.entries.hashmap.node",
-              bindings.entries.hashmap.node
-            );
+            // console.log(
+            //   "bindings.entries.hashmap.node",
+            //   bindings.entries.hashmap.node
+            // );
 
             if (
               this.mappingtable[
@@ -623,7 +663,6 @@ export default {
       /*
       Here you add a selected mapping config to the mapping table
   */
-      console.group("addMapping");
 
       if (
         this.tree.value.source.length > 0 &&
@@ -682,16 +721,9 @@ export default {
         this.tree.value.target.length > 0
       ) {
         for (var left of this.tree.value.source) {
-          console.log("loop left");
-
           for (var right of this.tree.value.target) {
-            console.log("loop right");
             var from = document.querySelectorAll(`[data-id='${left}']`)[0];
-
             var to = document.querySelectorAll(`[data-id='${right}']`)[0];
-
-            console.log("from", from);
-            console.log("to", to);
 
             if (from != null && to != null) {
               this.arrows.push(new LeaderLine(from, to));
@@ -773,6 +805,15 @@ export default {
       columns: this.mappingDataTableConfig,
       sectionClasses: {
         table: "is-narrow is-fullwidth",
+      },
+      afterRowAppended: () => {
+        this.selectValue();
+      },
+      afterRowInserted: () => {
+        this.selectValue();
+      },
+      afterRowRemoved: () => {
+        this.selectValue();
       },
     });
     this.refreshMappingtableUI();
