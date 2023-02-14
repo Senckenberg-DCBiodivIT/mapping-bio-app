@@ -339,50 +339,6 @@ export default {
       console.groupEnd();
     },
 
-    // mappingtableFromRDF(quads) /*OK*/ {
-    //   console.group("preprocessingMetadataQuadsMappingtable", quads);
-    //   /*
-    //      Format mapping compare structure
-    //      {
-    //       "source link":{
-    //         "target link":{
-    //           "sourceTitle","targetTitle", "relation", "comment"
-    //         }
-    //       }
-    //      }
-    //      */
-
-    //   for (var item in quads) {
-    //     console.log("item", item);
-    //   }
-
-    //   console.groupEnd();
-    // },
-
-    // async loadRDFChildren(id, position) {
-    //   console.group("loadRDFChildren", id, position);
-    //   var result = [];
-
-    //   // Check superclass
-    //   // var query = "SELECT * {?s ?p ?o}";
-    //   var query = this.query.subclassOf.replace("ID_HERE", id);
-
-    //   console.log("query", query);
-    //   var bindingsStream = await this.rdfObj.engines[position].queryBindings(
-    //     query
-    //   );
-
-    //   // Get id and name
-    //   bindingsStream.on("data", (bindings) => {
-    //     console.log("\n\nbindings recursive", bindings);
-    //   });
-
-    //   // Check for Children
-
-    //   console.groupEnd();
-    //   return result;
-    // },
-
     loadOntology(event, position) /**/ {
       console.group("loadOntology", position);
 
@@ -485,11 +441,16 @@ export default {
       bindingsStream.on("data", (bindings) => {
         console.log("bindings", bindings);
         const childID =
-          bindings.entries.hashmap.node.value.id.replaceAll('"', "") +
-          `_${position}`;
+          bindings.entries.hashmap.node.children[1].value.id.replaceAll(
+            '"',
+            ""
+          ) + `_${position}`;
         tempChild.push({
           id: childID,
-          label: bindings.entries.hashmap.node.value.id.replaceAll('"', ""),
+          label: bindings.entries.hashmap.node.children[0].value.id.replaceAll(
+            '"',
+            ""
+          ),
           children: null,
           position: position, // for the sparql engine
         });
@@ -774,12 +735,16 @@ export default {
         });
       }
       window.mappingDataTable.load(currentState);
+      this.resetArrows();
       console.groupEnd();
     },
 
     resetArrows() /* TODO: Fix reactivity*/ {
-      // this.tree.value.source = [];
-      // this.tree.value.target = [];
+      console.group("resetArrows");
+      this.tree.value.source = [];
+      this.tree.value.target = [];
+      this.selectValue();
+      console.groupEnd();
     },
   },
 
