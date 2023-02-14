@@ -12,8 +12,8 @@
       </div>
       <div class="column">
         <div class="has-text-centered ownFont bigText">
-          BioDT WP5 <br />
-          Prototype V0.6.1
+          mapping.bio <br />Mapping Service<br />
+          Prototype V0.7.1
         </div>
       </div>
       <div class="column is-3"></div>
