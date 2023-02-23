@@ -66,10 +66,14 @@
       <o-button :label="'Export CSV'" @click="exportCSV" :variant="'primary'" />
     </div>
     <div class="column is-3">
-      <o-button :label="'(in progress) Export RDF/XML'" :variant="'warning'" />
+      <o-button
+        :label="'Export RDF/XML'"
+        @click="exportRDF"
+        :variant="'primary'"
+      />
     </div>
     <div class="column is-3">
-      <o-button :label="'(Disabled) Export TTL'" :variant="'disabled'" />
+      <o-button :label="'(Disabled) Export TTL'" :variant="'warning'" />
     </div>
   </div>
 
@@ -208,6 +212,9 @@ import { Engine } from "quadstore-comunica";
 import { storeStream } from "rdf-store-stream";
 import { query } from "@/components/query";
 
+// Export RDF
+// import { RdfXmlParser } from "rdfxml-streaming-parser";
+
 export default {
   name: "Editor-Main",
   mixins: [CordraMixin],
@@ -292,6 +299,17 @@ export default {
 
   methods: {
     // Exports
+
+    downloadMappingExport(txtContent, fileExtension) {
+      var exportElement = document.createElement("a");
+      exportElement.href =
+        "data:text/csv;charset=utf-8," + encodeURIComponent(txtContent);
+      exportElement.target = "_blank";
+
+      exportElement.download = `Mapping_Table.${fileExtension}`;
+      exportElement.click();
+    },
+
     exportCSV() /*(OK)*/ {
       console.group("exportCSV");
 
@@ -315,19 +333,97 @@ export default {
         csv += "\n";
       });
 
-      var csvElement = document.createElement("a");
-      csvElement.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
-      csvElement.target = "_blank";
-
-      csvElement.download = "Mapping_Table.csv";
-      csvElement.click();
+      this.downloadMappingExport(csv, "csv");
 
       console.groupEnd();
     },
 
     exportRDF() {
       console.group("exportRDF");
-      //
+      var currentState = "";
+      // const myParser = new RdfXmlParser();
+
+      // var baseIRI = "http://example.org";
+
+      // myParser
+      //   .on("data", console.log)
+      //   .on("error", console.error)
+      //   .on("end", () => console.log("All triples were parsed!", myParser));
+
+      currentState += `<?xml version='1.0' encoding='utf-8' standalone='no'?>
+      `;
+      // myParser.write(`<?xml version='1.0' encoding='utf-8' standalone='no'?>`);
+
+      currentState += `<rdf:RDF xmlns='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'
+            xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+            xmlns:xsd='http://www.w3.org/2001/XMLSchema#'
+            xmlns:align='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'>`;
+      // myParser.write(`<rdf:RDF xmlns='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'
+      //    xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+      //    xmlns:xsd='http://www.w3.org/2001/XMLSchema#'
+      //    xmlns:align='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'>`);
+
+      currentState += `<Alignment>
+           <xml>yes</xml>
+           <level>0</level>
+           <type>**</type>`;
+      // myParser.write(`<Alignment>
+      //   <xml>yes</xml>
+      //   <level>0</level>
+      //   <type>**</type>`);
+
+      currentState += `<onto1>
+           <Ontology rdf:about="null">
+             <location>null</location>
+           </Ontology>
+         </onto1>`;
+      // myParser.write(`<onto1>
+      //   <Ontology rdf:about="${baseIRI}">
+      //     <location>null</location>
+      //   </Ontology>
+      // </onto1>`);
+
+      currentState += `<onto2>
+           <Ontology rdf:about="null">
+             <location>null</location>
+           </Ontology>
+         </onto2>`;
+      // myParser.write(`<onto2>
+      //   <Ontology rdf:about="${baseIRI}">
+      //     <location>null</location>
+      //   </Ontology>
+      // </onto2>`);
+
+      for (var idxSource in this.mappingtable) {
+        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
+          currentState += `<map>
+            <Cell>
+              <entity1 rdf:resource='${idxSource}'/>
+              <entity2 rdf:resource='${idxTarget}'/>
+              <relation>${this.mappingtable[idxSource][idxTarget]["relation"]}</relation>
+              <measure rdf:datatype='http://www.w3.org/2001/XMLSchema#float'>1.0</measure>
+            </Cell>
+          </map>`;
+          // myParser.write(`<map>
+          //   <Cell>
+          //     <entity1 rdf:resource='${idxSource}'/>
+          //     <entity2 rdf:resource='${idxTarget}'/>
+          //     <relation>${this.mappingtable[idxSource][idxTarget]["relation"]}</relation>
+          //     <measure rdf:datatype='http://www.w3.org/2001/XMLSchema#float'>1.0</measure>
+          //   </Cell>
+          // </map>`);
+        }
+      }
+
+      currentState += `</Alignment>`;
+      // myParser.write(`</Alignment>`);
+
+      currentState += `</rdf:RDF>`;
+      // myParser.write(`</rdf:RDF>`);
+
+      // myParser.end();
+
+      this.downloadMappingExport(currentState, "rdf");
 
       console.groupEnd();
     },
