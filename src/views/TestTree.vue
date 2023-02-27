@@ -1,7 +1,7 @@
 <template>
   <!-- TODO: mappingTable as an own component with an store segment? -->
   <div class="has-text-centered" style="margin-top: 1em; font-size: 2em">
-    Mapping
+    Mapping Editor
   </div>
   <br />
 
@@ -31,53 +31,62 @@
           <div class="column is-one" />
         </div>
       </div>
+
+      <!-- Buttons "Load" ... "Download CSV" -->
+      <div class="columns has-text-centered">
+        <div class="column is-3">
+          <div
+            class="file is-primary is-centered"
+            :class="{ 'has-name': hasMappingFileName }"
+          >
+            <label class="file-label">
+              <input
+                class="file-input"
+                type="file"
+                accept=""
+                name="resume"
+                @change="loadMappingTable"
+              />
+              <span class="file-cta">
+                <span class="file-icon">
+                  <i class="fas fa-upload"></i>
+                </span>
+                <span class="file-label">Choose a mapping file...</span>
+              </span>
+              <span class="file-name" v-if="hasMappingFileName"
+                >{{ mappingtableFilename }}
+              </span>
+            </label>
+          </div>
+        </div>
+        <div class="column is-3">
+          <o-button
+            :label="'Export CSV'"
+            @click="exportCSV"
+            :variant="'primary'"
+          />
+        </div>
+        <div class="column is-3">
+          <o-button
+            :label="'Export RDF/XML'"
+            @click="exportRDF"
+            :variant="'primary'"
+          />
+        </div>
+        <div class="column is-3">
+          <o-button
+            :label="'(In progress) Export TTL'"
+            @click="exportTTL"
+            :variant="'warning'"
+          />
+        </div>
+      </div>
+
+      <hr />
     </o-collapse>
   </section>
   <br /><br />
 
-  <!-- Buttons "Load" ... "Download CSV" -->
-  <div class="columns has-text-centered">
-    <div class="column is-3">
-      <div
-        class="file is-primary is-centered"
-        :class="{ 'has-name': hasMappingFileName }"
-      >
-        <label class="file-label">
-          <input
-            class="file-input"
-            type="file"
-            accept=""
-            name="resume"
-            @change="loadMappingTable"
-          />
-          <span class="file-cta">
-            <span class="file-icon">
-              <i class="fas fa-upload"></i>
-            </span>
-            <span class="file-label">Choose a mapping file...</span>
-          </span>
-          <span class="file-name" v-if="hasMappingFileName"
-            >{{ mappingtableFilename }}
-          </span>
-        </label>
-      </div>
-    </div>
-    <div class="column is-3">
-      <o-button :label="'Export CSV'" @click="exportCSV" :variant="'primary'" />
-    </div>
-    <div class="column is-3">
-      <o-button
-        :label="'Export RDF/XML'"
-        @click="exportRDF"
-        :variant="'primary'"
-      />
-    </div>
-    <div class="column is-3">
-      <o-button :label="'(Disabled) Export TTL'" :variant="'warning'" />
-    </div>
-  </div>
-
-  <hr />
   <!-- Debug -->
   <!-- metadataFromQuad: {{ metadataFromQuad }}  -->
   <!-- <br />
@@ -213,7 +222,7 @@ import { storeStream } from "rdf-store-stream";
 import { query } from "@/components/query";
 
 // Export RDF
-// import { RdfXmlParser } from "rdfxml-streaming-parser";
+import { RdfXmlParser } from "rdfxml-streaming-parser";
 
 export default {
   name: "Editor-Main",
@@ -222,6 +231,8 @@ export default {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
     return {
+      testQuad: [],
+
       openCloseTableView: true, // false: closed, true: open
 
       mappingDataTableConfig: [
@@ -341,58 +352,59 @@ export default {
     exportRDF() {
       console.group("exportRDF");
       var currentState = "";
-      // const myParser = new RdfXmlParser();
+      const myParser = new RdfXmlParser();
 
-      // var baseIRI = "http://example.org";
+      var baseIRI = "http://example.org";
 
-      // myParser
-      //   .on("data", console.log)
-      //   .on("error", console.error)
-      //   .on("end", () => console.log("All triples were parsed!", myParser));
+      myParser
+        .on("data", console.log)
+
+        .on("error", console.error);
+      // .on("end", () => console.log("All triples were parsed!", myParser));
 
       currentState += `<?xml version='1.0' encoding='utf-8' standalone='no'?>
       `;
-      // myParser.write(`<?xml version='1.0' encoding='utf-8' standalone='no'?>`);
+      myParser.write(`<?xml version='1.0' encoding='utf-8' standalone='no'?>`);
 
       currentState += `<rdf:RDF xmlns='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'
             xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'
             xmlns:xsd='http://www.w3.org/2001/XMLSchema#'
             xmlns:align='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'>`;
-      // myParser.write(`<rdf:RDF xmlns='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'
-      //    xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'
-      //    xmlns:xsd='http://www.w3.org/2001/XMLSchema#'
-      //    xmlns:align='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'>`);
+      myParser.write(`<rdf:RDF xmlns='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'
+         xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+         xmlns:xsd='http://www.w3.org/2001/XMLSchema#'
+         xmlns:align='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'>`);
 
       currentState += `<Alignment>
            <xml>yes</xml>
            <level>0</level>
            <type>**</type>`;
-      // myParser.write(`<Alignment>
-      //   <xml>yes</xml>
-      //   <level>0</level>
-      //   <type>**</type>`);
+      myParser.write(`<Alignment>
+        <xml>yes</xml>
+        <level>0</level>
+        <type>**</type>`);
 
       currentState += `<onto1>
            <Ontology rdf:about="null">
              <location>null</location>
            </Ontology>
          </onto1>`;
-      // myParser.write(`<onto1>
-      //   <Ontology rdf:about="${baseIRI}">
-      //     <location>null</location>
-      //   </Ontology>
-      // </onto1>`);
+      myParser.write(`<onto1>
+        <Ontology rdf:about="${baseIRI}">
+          <location>null</location>
+        </Ontology>
+      </onto1>`);
 
       currentState += `<onto2>
            <Ontology rdf:about="null">
              <location>null</location>
            </Ontology>
          </onto2>`;
-      // myParser.write(`<onto2>
-      //   <Ontology rdf:about="${baseIRI}">
-      //     <location>null</location>
-      //   </Ontology>
-      // </onto2>`);
+      myParser.write(`<onto2>
+        <Ontology rdf:about="${baseIRI}">
+          <location>null</location>
+        </Ontology>
+      </onto2>`);
 
       for (var idxSource in this.mappingtable) {
         for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
@@ -400,28 +412,34 @@ export default {
             <Cell>
               <entity1 rdf:resource='${idxSource}'/>
               <entity2 rdf:resource='${idxTarget}'/>
-              <relation>${this.mappingtable[idxSource][idxTarget]["relation"]}</relation>
+              <relation>${this.mappingtable[idxSource][idxTarget]["relation"]
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")}</relation>
               <measure rdf:datatype='http://www.w3.org/2001/XMLSchema#float'>1.0</measure>
             </Cell>
           </map>`;
-          // myParser.write(`<map>
-          //   <Cell>
-          //     <entity1 rdf:resource='${idxSource}'/>
-          //     <entity2 rdf:resource='${idxTarget}'/>
-          //     <relation>${this.mappingtable[idxSource][idxTarget]["relation"]}</relation>
-          //     <measure rdf:datatype='http://www.w3.org/2001/XMLSchema#float'>1.0</measure>
-          //   </Cell>
-          // </map>`);
+
+          console.log("loop write");
+          myParser.write(`<map>
+            <Cell>
+              <entity1 rdf:resource='${idxSource}'/>
+              <entity2 rdf:resource='${idxTarget}'/>
+              <relation>${this.mappingtable[idxSource][idxTarget]["relation"]
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")}</relation>
+              <measure rdf:datatype='http://www.w3.org/2001/XMLSchema#float'>1.0</measure>
+            </Cell>
+          </map>`);
         }
       }
 
       currentState += `</Alignment>`;
-      // myParser.write(`</Alignment>`);
+      myParser.write(`</Alignment>`);
 
       currentState += `</rdf:RDF>`;
-      // myParser.write(`</rdf:RDF>`);
+      myParser.write(`</rdf:RDF>`);
 
-      // myParser.end();
+      myParser.end();
 
       this.downloadMappingExport(currentState, "rdf");
 
@@ -431,6 +449,29 @@ export default {
     exportTTL() {
       console.group("exportTTL");
       //
+
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const ttl_write = require("@graphy/content.ttl.write");
+
+      let ds_writer = ttl_write({
+        prefixes: {
+          dbr: "http://dbpedia.org/resource/",
+          ex: "http://ex.org/",
+        },
+      });
+
+      ds_writer.on("data", (s_turtle) => {
+        console.log(s_turtle + "");
+      });
+
+      ds_writer.write({
+        type: "c3",
+        value: {
+          "dbr:Banana": {
+            "ex:lastSeen": new Date(),
+          },
+        },
+      });
 
       console.groupEnd();
     },
@@ -670,6 +711,8 @@ export default {
               sourceTitle: "Enter a title for the CSV export here",
               targetTitle: "Enter a title for the CSV export here",
               relation: bindings.entries.hashmap.node.children[2].value.value,
+              // .replace("&lt;", "<")
+              // .replace("&gt;", ">"),
               comment: "Enter a comment for the CSV export here",
             };
           });
