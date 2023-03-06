@@ -224,6 +224,13 @@ import { query } from "@/components/query";
 // Export RDF
 import { RdfXmlParser } from "rdfxml-streaming-parser";
 
+// TEst 2
+// import formats from "@rdfjs/formats-common";
+// import { Readable } from "readable-stream";
+
+import * as RdfDataModel from "rdf-data-model";
+import * as RdfString from "rdf-string";
+
 export default {
   name: "Editor-Main",
   mixins: [CordraMixin],
@@ -231,7 +238,7 @@ export default {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
     return {
-      testQuad: [],
+      testObj: {},
 
       openCloseTableView: true, // false: closed, true: open
 
@@ -351,16 +358,18 @@ export default {
 
     exportRDF() {
       console.group("exportRDF");
-      var currentState = "";
-      const myParser = new RdfXmlParser();
+      var currentState = ""; // Text only
+      const myParser = new RdfXmlParser(); // Quads
 
       var baseIRI = "http://example.org";
 
       myParser
         .on("data", console.log)
-
-        .on("error", console.error);
-      // .on("end", () => console.log("All triples were parsed!", myParser));
+        .on("error", console.error)
+        .on("end", () => {
+          console.log("All triples were parsed!", myParser);
+          this.testObj = myParser;
+        });
 
       currentState += `<?xml version='1.0' encoding='utf-8' standalone='no'?>
       `;
@@ -419,7 +428,6 @@ export default {
             </Cell>
           </map>`;
 
-          console.log("loop write");
           myParser.write(`<map>
             <Cell>
               <entity1 rdf:resource='${idxSource}'/>
@@ -449,29 +457,40 @@ export default {
     exportTTL() {
       console.group("exportTTL");
       //
+      console.log("this.testObj", this.testObj);
 
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const ttl_write = require("@graphy/content.ttl.write");
+      for (var idxSource in this.mappingtable) {
+        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
+          console.log(
+            RdfString.stringQuadToQuad({
+              subject: idxSource,
+              predicate: "label",
+              object: "testlabel idxSource",
+              graph: "",
+            })
+          );
 
-      let ds_writer = ttl_write({
-        prefixes: {
-          dbr: "http://dbpedia.org/resource/",
-          ex: "http://ex.org/",
-        },
-      });
+          console.log(
+            RdfString.stringQuadToQuad({
+              subject: idxTarget,
+              predicate: "label",
+              object: "testlabel idxTarget",
+              graph: "",
+            })
+          );
 
-      ds_writer.on("data", (s_turtle) => {
-        console.log(s_turtle + "");
-      });
-
-      ds_writer.write({
-        type: "c3",
-        value: {
-          "dbr:Banana": {
-            "ex:lastSeen": new Date(),
-          },
-        },
-      });
+          console.log(
+            RdfString.stringQuadToQuad({
+              subject: idxSource,
+              predicate: this.mappingtable[idxSource][idxTarget]["relation"]
+                .replace("<", "&lt;")
+                .replace(">", "&gt;"),
+              object: idxTarget,
+              graph: "",
+            })
+          );
+        }
+      }
 
       console.groupEnd();
     },
