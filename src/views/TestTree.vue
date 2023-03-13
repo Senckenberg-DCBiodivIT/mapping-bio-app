@@ -34,7 +34,7 @@
 
       <!-- Buttons "Load" ... "Download CSV" -->
       <div class="columns has-text-centered">
-        <div class="column is-3">
+        <div class="column is-2">
           <div
             class="file is-primary is-centered"
             :class="{ 'has-name': hasMappingFileName }"
@@ -59,24 +59,40 @@
             </label>
           </div>
         </div>
-        <div class="column is-3">
-          <o-button
-            :label="'Export CSV'"
-            @click="exportCSV"
-            :variant="'primary'"
-          />
+        <div class="column is-2">
+          <o-dropdown
+            aria-role="list"
+            v-model="dropdownExportFormatItem"
+            @update:modelValue="exportMapping"
+          >
+            <template #trigger="{ active }">
+              <o-button variant="primary">
+                <span>{{
+                  dropdownExportFormat[dropdownExportFormatItem]
+                }}</span>
+
+                <o-icon
+                  pack="fa"
+                  :icon="active ? 'chevron-down' : 'chevron-up'"
+                ></o-icon>
+              </o-button>
+            </template>
+
+            <o-dropdown-item
+              v-for="(item, key) in dropdownExportFormat"
+              :key="key"
+              :value="key"
+              aria-role="listitem"
+            >
+              {{ dropdownExportFormat[key] }}</o-dropdown-item
+            >
+          </o-dropdown>
         </div>
-        <div class="column is-3">
+
+        <div class="column is-2">
           <o-button
-            :label="'Export RDF/XML'"
-            @click="exportRDF"
-            :variant="'primary'"
-          />
-        </div>
-        <div class="column is-3">
-          <o-button
-            :label="'(In progress) Export TTL'"
-            @click="exportTTL"
+            :label="'Export RDF/SSSOM'"
+            @click="exportRDF('sssom')"
             :variant="'warning'"
           />
         </div>
@@ -222,14 +238,17 @@ import { storeStream } from "rdf-store-stream";
 import { query } from "@/components/query";
 
 // Export RDF
-import { RdfXmlParser } from "rdfxml-streaming-parser";
+import { Readable } from "readable-stream";
 
-// TEst 2
-// import formats from "@rdfjs/formats-common";
-// import { Readable } from "readable-stream";
+import rdf from "@rdfjs/data-model";
 
-import * as RdfDataModel from "rdf-data-model";
-import * as RdfString from "rdf-string";
+import prefixes from "@zazuko/rdf-vocabularies/prefixes";
+import {
+  turtle,
+  rdfXml,
+  jsonld,
+} from "@rdfjs-elements/formats-pretty/serializers";
+import getStream from "get-stream";
 
 export default {
   name: "Editor-Main",
@@ -306,12 +325,23 @@ export default {
       dropdownItemsMatching: {
         // TODO: ask Claus about...
         // "skos:mappingRelation",
-        "skos:closeMatch": { rdf: 0.65, csv: "" },
-        "skos:exactMatch": { rdf: 1, csv: "(=)" },
-        "skos:broadMatch": { rdf: 0.75, csv: ">" },
-        "skos:narrowMatch": { rdf: 0.65, csv: "<" },
-        "skos:relatedMatch": { rdf: 0.5, csv: "" },
+        "skos:closeMatch": { csv: "" },
+        "skos:exactMatch": { csv: "(=)" },
+        "skos:broadMatch": { csv: ">" },
+        "skos:narrowMatch": { csv: "<" },
+        "skos:relatedMatch": { csv: "" },
       },
+
+      dropdownExportFormat: [
+        "Export",
+        "CSV",
+        "RDF/XML",
+        "RDF/TTL",
+        "RDF/jsonLD",
+        "RDF/SSSOM",
+      ],
+      dropdownExtension: ["", "csv", "rdf", "ttl", "json", "sssom"],
+      dropdownExportFormatItem: 0,
     };
   },
 
@@ -328,6 +358,17 @@ export default {
       exportElement.click();
     },
 
+    exportMapping() {
+      console.group("exportMapping");
+
+      if (this.dropdownExportFormatItem > 0) {
+        if (this.dropdownExportFormatItem == 1) {
+          this.exportCSV();
+        } else
+          this.exportRDF(this.dropdownExtension[this.dropdownExportFormatItem]);
+      }
+      console.groupEnd();
+    },
     exportCSV() /*(OK)*/ {
       console.group("exportCSV");
 
@@ -356,141 +397,196 @@ export default {
       console.groupEnd();
     },
 
-    exportRDF() {
-      console.group("exportRDF");
-      var currentState = ""; // Text only
-      const myParser = new RdfXmlParser(); // Quads
+    async exportRDF(fileExtension) {
+      console.group(`exportRDF as a ${fileExtension}`);
 
-      var baseIRI = "http://example.org";
+      var input = [];
+      var labelReady = [];
 
-      myParser
-        .on("data", console.log)
-        .on("error", console.error)
-        .on("end", () => {
-          console.log("All triples were parsed!", myParser);
-          this.testObj = myParser;
+      for (var idxSource in this.mappingtable) {
+        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
+          // Label source
+          if (!labelReady.includes(idxSource)) {
+            input.push(
+              rdf.quad(
+                rdf.namedNode(`${idxSource}`),
+                rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
+                rdf.literal(
+                  this.mappingtable[idxSource][idxTarget]["sourceTitle"]
+                )
+              )
+            );
+
+            labelReady.push(idxSource);
+          }
+
+          // Label Target
+          if (!labelReady.includes(idxTarget)) {
+            input.push(
+              rdf.quad(
+                rdf.namedNode(`${idxTarget}`),
+                rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
+                rdf.literal(
+                  this.mappingtable[idxSource][idxTarget]["targetTitle"]
+                )
+              )
+            );
+            labelReady.push(idxTarget);
+          }
+
+          input.push(
+            rdf.quad(
+              rdf.namedNode(`${idxSource}`),
+              rdf.namedNode(`${idxTarget}`),
+              rdf.literal(
+                // TODO: check prefix
+                "rel:" + this.mappingtable[idxSource][idxTarget]["relation"]
+              )
+            )
+          );
+
+          input.push(
+            rdf.quad(
+              rdf.namedNode(`${idxSource}`),
+              rdf.namedNode(`${idxTarget}`),
+              rdf.literal(
+                // TODO: check that
+                "mes:" + '"1.0"^^<http://www.w3.org/2001/XMLSchema#float"'
+              )
+            )
+          );
+        }
+      }
+
+      const { schema, dcterms, foaf, rdfs } = prefixes;
+      var sink;
+
+      if (fileExtension === "ttl") {
+        sink = await turtle({
+          prefixes: {
+            schema,
+            dcterms,
+            foaf,
+            rdfs,
+          },
         });
-
-      currentState += `<?xml version='1.0' encoding='utf-8' standalone='no'?>
-      `;
-      myParser.write(`<?xml version='1.0' encoding='utf-8' standalone='no'?>`);
-
-      currentState += `<rdf:RDF xmlns='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'
-            xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'
-            xmlns:xsd='http://www.w3.org/2001/XMLSchema#'
-            xmlns:align='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'>`;
-      myParser.write(`<rdf:RDF xmlns='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'
-         xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'
-         xmlns:xsd='http://www.w3.org/2001/XMLSchema#'
-         xmlns:align='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'>`);
-
-      currentState += `<Alignment>
-           <xml>yes</xml>
-           <level>0</level>
-           <type>**</type>`;
-      myParser.write(`<Alignment>
-        <xml>yes</xml>
-        <level>0</level>
-        <type>**</type>`);
-
-      currentState += `<onto1>
-           <Ontology rdf:about="null">
-             <location>null</location>
-           </Ontology>
-         </onto1>`;
-      myParser.write(`<onto1>
-        <Ontology rdf:about="${baseIRI}">
-          <location>null</location>
-        </Ontology>
-      </onto1>`);
-
-      currentState += `<onto2>
-           <Ontology rdf:about="null">
-             <location>null</location>
-           </Ontology>
-         </onto2>`;
-      myParser.write(`<onto2>
-        <Ontology rdf:about="${baseIRI}">
-          <location>null</location>
-        </Ontology>
-      </onto2>`);
-
-      for (var idxSource in this.mappingtable) {
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
-          currentState += `<map>
-            <Cell>
-              <entity1 rdf:resource='${idxSource}'/>
-              <entity2 rdf:resource='${idxTarget}'/>
-              <relation>${this.mappingtable[idxSource][idxTarget]["relation"]
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")}</relation>
-              <measure rdf:datatype='http://www.w3.org/2001/XMLSchema#float'>1.0</measure>
-            </Cell>
-          </map>`;
-
-          myParser.write(`<map>
-            <Cell>
-              <entity1 rdf:resource='${idxSource}'/>
-              <entity2 rdf:resource='${idxTarget}'/>
-              <relation>${this.mappingtable[idxSource][idxTarget]["relation"]
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")}</relation>
-              <measure rdf:datatype='http://www.w3.org/2001/XMLSchema#float'>1.0</measure>
-            </Cell>
-          </map>`);
-        }
+      } else if (fileExtension === "rdf") {
+        sink = await rdfXml({
+          prefixes: {
+            schema,
+            dcterms,
+            foaf,
+            rdfs,
+          },
+        });
+      } else if (fileExtension === "json") {
+        sink = await jsonld({
+          prefixes: {
+            schema,
+            dcterms,
+            foaf,
+            rdfs,
+          },
+        });
       }
 
-      currentState += `</Alignment>`;
-      myParser.write(`</Alignment>`);
+      const stream = await sink.import(Readable.from(input));
+      let content = await getStream(stream);
 
-      currentState += `</rdf:RDF>`;
-      myParser.write(`</rdf:RDF>`);
+      this.downloadMappingExport(content, fileExtension);
 
-      myParser.end();
+      // var currentState = ""; // Text only
+      // const myParser = new RdfXmlParser(); // Quads
 
-      this.downloadMappingExport(currentState, "rdf");
+      // var baseIRI = "http://example.org";
 
-      console.groupEnd();
-    },
+      // myParser
+      //   .on("data", console.log)
+      //   .on("error", console.error)
+      //   .on("end", () => {
+      //     console.log("All triples were parsed!", myParser);
+      //     this.testObj = myParser;
+      //   });
 
-    exportTTL() {
-      console.group("exportTTL");
-      //
-      console.log("this.testObj", this.testObj);
+      // currentState += `<?xml version='1.0' encoding='utf-8' standalone='no'?>
+      // `;
+      // myParser.write(`<?xml version='1.0' encoding='utf-8' standalone='no'?>`);
 
-      for (var idxSource in this.mappingtable) {
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
-          console.log(
-            RdfString.stringQuadToQuad({
-              subject: idxSource,
-              predicate: "label",
-              object: "testlabel idxSource",
-              graph: "",
-            })
-          );
+      // currentState += `<rdf:RDF xmlns='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'
+      //       xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+      //       xmlns:xsd='http://www.w3.org/2001/XMLSchema#'
+      //       xmlns:align='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'>`;
+      // myParser.write(`<rdf:RDF xmlns='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'
+      //    xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+      //    xmlns:xsd='http://www.w3.org/2001/XMLSchema#'
+      //    xmlns:align='http://knowledgeweb.semanticweb.org/heterogeneity/alignment#'>`);
 
-          console.log(
-            RdfString.stringQuadToQuad({
-              subject: idxTarget,
-              predicate: "label",
-              object: "testlabel idxTarget",
-              graph: "",
-            })
-          );
+      // currentState += `<Alignment>
+      //      <xml>yes</xml>
+      //      <level>0</level>
+      //      <type>**</type>`;
+      // myParser.write(`<Alignment>
+      //   <xml>yes</xml>
+      //   <level>0</level>
+      //   <type>**</type>`);
 
-          console.log(
-            RdfString.stringQuadToQuad({
-              subject: idxSource,
-              predicate: this.mappingtable[idxSource][idxTarget]["relation"]
-                .replace("<", "&lt;")
-                .replace(">", "&gt;"),
-              object: idxTarget,
-              graph: "",
-            })
-          );
-        }
-      }
+      // currentState += `<onto1>
+      //      <Ontology rdf:about="null">
+      //        <location>null</location>
+      //      </Ontology>
+      //    </onto1>`;
+      // myParser.write(`<onto1>
+      //   <Ontology rdf:about="${baseIRI}">
+      //     <location>null</location>
+      //   </Ontology>
+      // </onto1>`);
+
+      // currentState += `<onto2>
+      //      <Ontology rdf:about="null">
+      //        <location>null</location>
+      //      </Ontology>
+      //    </onto2>`;
+      // myParser.write(`<onto2>
+      //   <Ontology rdf:about="${baseIRI}">
+      //     <location>null</location>
+      //   </Ontology>
+      // </onto2>`);
+
+      // for (var idxSource in this.mappingtable) {
+      //   for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
+      //     currentState += `<map>
+      //       <Cell>
+      //         <entity1 rdf:resource='${idxSource}'/>
+      //         <entity2 rdf:resource='${idxTarget}'/>
+      //         <relation>${this.mappingtable[idxSource][idxTarget]["relation"]
+      //           .replace("<", "&lt;")
+      //           .replace(">", "&gt;")}</relation>
+      //         <measure rdf:datatype='http://www.w3.org/2001/XMLSchema#float'>1.0</measure>
+      //       </Cell>
+      //     </map>`;
+
+      //     myParser.write(`<map>
+      //       <Cell>
+      //         <entity1 rdf:resource='${idxSource}'/>
+      //         <entity2 rdf:resource='${idxTarget}'/>
+      //         <relation>${this.mappingtable[idxSource][idxTarget]["relation"]
+      //           .replace("<", "&lt;")
+      //           .replace(">", "&gt;")}</relation>
+      //         <measure rdf:datatype='http://www.w3.org/2001/XMLSchema#float'>1.0</measure>
+      //       </Cell>
+      //     </map>`);
+      //   }
+      // }
+
+      // currentState += `</Alignment>`;
+      // myParser.write(`</Alignment>`);
+
+      // currentState += `</rdf:RDF>`;
+      // myParser.write(`</rdf:RDF>`);
+
+      // myParser.end();
+
+      // this.downloadMappingExport(currentState, "rdf");
 
       console.groupEnd();
     },
