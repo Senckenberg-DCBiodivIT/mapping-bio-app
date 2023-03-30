@@ -12,19 +12,6 @@ export default createRouter({
     },
 
     {
-      path: "/testWeb",
-      name: "testWeb",
-
-      component: () => import("../views/TestWeb.vue"),
-    },
-    {
-      path: "/testtree",
-      name: "testWeb",
-
-      component: () => import("../views/TestTree.vue"),
-    },
-
-    {
       path: "/about",
       name: "About",
 
