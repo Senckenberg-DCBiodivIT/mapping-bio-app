@@ -66,7 +66,7 @@
 
         <div class="column is-2">
           <o-button
-            :label="'Show all mapings'"
+            :label="'Show all mappings'"
             @click="showAllArrowsFromMappingtable()"
             :variant="'primary'"
           />
@@ -292,8 +292,8 @@ export default {
           type: "select",
           ctrlOptions: ["", "=", "<", ">"],
           events: {
-            click: (e, that = this) => {
-              that.showArrowFromMappingtable(e.uniqueIndex);
+            change: (e, that = this) => {
+              that.updateMapping(e.uniqueIndex, "relation");
             },
           },
         },
@@ -346,6 +346,9 @@ export default {
           events: {
             click: (e, that = this) => {
               that.showArrowFromMappingtable(e.uniqueIndex);
+            },
+            change: (e, that = this) => {
+              that.updateMapping(e.uniqueIndex, "comment");
             },
           },
         },
@@ -1002,12 +1005,43 @@ export default {
       console.groupEnd();
     },
 
+    updateMapping(id, param) {
+      /*
+      Here you can update the mapping table data after a change in the UI
+      like "relation" or "comment"
+      */
+
+      id--; // Table-widget counts from 1 to n
+
+      console.group("updateMapping", id, param);
+
+      // Get updated value
+      var updatedValue = window.mappingDataTable.getCtrlValue(param, id);
+      var mappingtableSourceID = window.mappingDataTable.getCtrlValue(
+        "sourceLink",
+        id
+      );
+      var mappingtableTargetID = window.mappingDataTable.getCtrlValue(
+        "targetLink",
+        id
+      );
+
+      // Set updated value
+      this.mappingtable[mappingtableSourceID][mappingtableTargetID][param] =
+        updatedValue;
+
+      // Update the tree view
+      this.showArrowFromMappingtable(id + 1); // This function works with internal table-widget index. Table counts from 1 to n
+
+      console.groupEnd();
+    },
+
     selectValue() /* OK*/ {
       /*
           Here you check current selection of the ontologies and
           rewrite the arrows each call
       */
-      console.group("selectValue");
+      // console.group("selectValue");
 
       for (var arrow of this.arrows) {
         arrow.remove();
@@ -1032,7 +1066,7 @@ export default {
         }
       }
 
-      console.groupEnd();
+      // console.groupEnd();
     },
 
     refreshMappingtableUI() /* OK */ {
@@ -1044,7 +1078,8 @@ export default {
             - create a new
             - or delete a relation between two ontologies
       */
-      console.group("refreshMappingtableUI");
+
+      // console.group("refreshMappingtableUI");
       var currentState = [];
       for (var idxSource in this.mappingtable) {
         for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
@@ -1072,11 +1107,11 @@ export default {
         });
       }
       window.mappingDataTable.load(currentState);
-      console.groupEnd();
+      // console.groupEnd();
     },
 
     resetArrows() /* TODO: Fix reactivity*/ {
-      console.group("resetArrows");
+      // console.group("resetArrows");
       this.tree.value.source = [];
       this.tree.reloadKey.source++;
 
@@ -1084,11 +1119,11 @@ export default {
       this.tree.reloadKey.target++;
 
       this.selectValue();
-      console.groupEnd();
+      // console.groupEnd();
     },
 
     showArrowFromMappingtable(uniqueIndex) {
-      console.group("showArrowFromMappingtable", uniqueIndex);
+      // console.group("showArrowFromMappingtable", uniqueIndex);
 
       uniqueIndex--;
       this.resetArrows();
@@ -1102,7 +1137,7 @@ export default {
       ];
 
       this.selectValue();
-      console.groupEnd();
+      // console.groupEnd();
     },
 
     showAllArrowsFromMappingtable() {
