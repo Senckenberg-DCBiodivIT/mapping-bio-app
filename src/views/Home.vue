@@ -103,13 +103,6 @@
           </o-dropdown>
         </div>
 
-        <div class="column is-2" v-if="false">
-          <o-button
-            :label="'Export RDF/SSSOM'"
-            @click="exportRDF('sssom')"
-            :variant="'warning'"
-          />
-        </div>
         <div class="column is-1" />
       </div>
 
@@ -433,7 +426,7 @@ export default {
       console.groupEnd();
     },
 
-    exportCSV() /*(OK)*/ {
+    exportCSV() {
       console.group("exportCSV");
 
       var currentState = [];
@@ -675,6 +668,7 @@ export default {
       console.groupEnd();
     },
 
+    // Load
     loadOntology(event, position) /**/ {
       console.group("loadOntology", position);
 
@@ -959,6 +953,7 @@ export default {
       console.groupEnd();
     },
 
+    // Mapping interactions
     addMapping() {
       /*
       Here you add a selected mapping config to the mapping table
@@ -1036,40 +1031,7 @@ export default {
       console.groupEnd();
     },
 
-    selectValue() /* OK*/ {
-      /*
-          Here you check current selection of the ontologies and
-          rewrite the arrows each call
-      */
-      // console.group("selectValue");
-
-      for (var arrow of this.arrows) {
-        arrow.remove();
-      }
-      this.arrows = [];
-
-      if (
-        this.tree.value.source.length > 0 &&
-        this.tree.value.target.length > 0
-      ) {
-        for (var left of this.tree.value.source) {
-          for (var right of this.tree.value.target) {
-            var from = document.querySelectorAll(`[data-id='${left}']`)[0];
-            var to = document.querySelectorAll(`[data-id='${right}']`)[0];
-
-            if (from != null && to != null) {
-              this.arrows.push(new LeaderLine(from, to));
-              from = null;
-              to = null;
-            }
-          }
-        }
-      }
-
-      // console.groupEnd();
-    },
-
-    refreshMappingtableUI() /* OK */ {
+    refreshMappingtableUI() {
       /*
           Here you can manually refresh the UI state based on the current mapping state like
           - a loaded CSV
@@ -1110,7 +1072,41 @@ export default {
       // console.groupEnd();
     },
 
-    resetArrows() /* TODO: Fix reactivity*/ {
+    // Tree interactions
+    selectValue() {
+      /*
+          Here you check current selection of the ontologies and
+          rewrite the arrows each call
+      */
+      // console.group("selectValue");
+
+      for (var arrow of this.arrows) {
+        arrow.remove();
+      }
+      this.arrows = [];
+
+      if (
+        this.tree.value.source.length > 0 &&
+        this.tree.value.target.length > 0
+      ) {
+        for (var left of this.tree.value.source) {
+          for (var right of this.tree.value.target) {
+            var from = document.querySelectorAll(`[data-id='${left}']`)[0];
+            var to = document.querySelectorAll(`[data-id='${right}']`)[0];
+
+            if (from != null && to != null) {
+              this.arrows.push(new LeaderLine(from, to));
+              from = null;
+              to = null;
+            }
+          }
+        }
+      }
+
+      // console.groupEnd();
+    },
+
+    resetArrows() {
       // console.group("resetArrows");
       this.tree.value.source = [];
       this.tree.reloadKey.source++;
@@ -1206,15 +1202,6 @@ export default {
       sectionClasses: {
         table: "is-narrow is-fullwidth",
       },
-      // afterRowAppended: () => {
-      //   this.selectValue();
-      // },
-      // afterRowInserted: () => {
-      //   this.selectValue();
-      // },
-      // afterRowRemoved: () => {
-      //   this.selectValue();
-      // },
     });
     this.refreshMappingtableUI();
 
@@ -1272,22 +1259,6 @@ export default {
     //   console.log("Callback Funktion wird aufgerufen");
     //   callback(this.tree);
     // }, 2000);
-  },
-
-  watch: /*OK*/ {
-    treealueLeft: {
-      handler() {
-        this.selectValue();
-      },
-      deep: true,
-    },
-
-    treeValuetarget: {
-      handler() {
-        this.selectValue();
-      },
-      deep: true,
-    },
   },
 };
 </script>
