@@ -159,6 +159,7 @@
           <input
             class="file-input"
             type="file"
+            multiple
             accept="owl"
             name="resume"
             @change="(e) => loadOntology(e, 'source')"
@@ -201,6 +202,7 @@
           <input
             class="file-input"
             type="file"
+            multiple
             accept="owl"
             name="resume"
             @change="(e) => loadOntology(e, 'target')"
