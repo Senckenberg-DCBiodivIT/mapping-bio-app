@@ -185,6 +185,7 @@
         :alwaysOpen="true"
         :open-direction="'bottom'"
         :load-options="loadOntologyChild"
+        :default-expand-level="20"
       />
     </div>
     <div class="column" />
@@ -226,6 +227,7 @@
         :alwaysOpen="true"
         :open-direction="'bottom'"
         :load-options="loadOntologyChild"
+        :default-expand-level="20"
       />
     </div>
   </div>
@@ -237,15 +239,14 @@ import Treeselect from "vue3-treeselect";
 // import the styles
 import "vue3-treeselect/dist/vue3-treeselect.css";
 
+// Arrows
 import LeaderLine from "leader-line-new";
-</script>
-
-<script>
-// import CordraMixin from "@/mixins/cordra";
 
 // Mapping table
 import AppendGrid from "jquery.appendgrid";
+</script>
 
+<script>
 // RDF
 import rdfParser from "rdf-parse";
 
@@ -267,6 +268,9 @@ import {
 } from "@rdfjs-elements/formats-pretty/serializers";
 import getStream from "get-stream";
 
+// Test jsonLD
+import SerializerJsonld from "@rdfjs/serializer-jsonld-ext";
+
 export default {
   name: "Home-SGN",
   // mixins: [CordraMixin],
@@ -275,6 +279,7 @@ export default {
   data() {
     return {
       testObj: {},
+      intervalPerformance: false,
 
       openCloseTableView: true, // false: closed, true: open
 
@@ -283,7 +288,14 @@ export default {
           name: "relation",
           display: "Relation",
           type: "select",
-          ctrlOptions: ["", "=", "<", ">"],
+
+          ctrlOptions: [
+            "skos:closeMatch",
+            "skos:exactMatch",
+            "skos:broadMatch",
+            "skos:narrowMatch",
+            "skos:relatedMatch",
+          ],
           events: {
             change: (e, that = this) => {
               that.updateMapping(e.uniqueIndex, "relation");
@@ -381,11 +393,11 @@ export default {
       dropdownItemsMatching: {
         // TODO: ask Claus about...
         // "skos:mappingRelation",
-        "skos:closeMatch": { csv: "" },
-        "skos:exactMatch": { csv: "(=)" },
-        "skos:broadMatch": { csv: ">" },
-        "skos:narrowMatch": { csv: "<" },
-        "skos:relatedMatch": { csv: "" },
+        "skos:closeMatch": { csv: "skos:closeMatch" },
+        "skos:exactMatch": { csv: "skos:exactMatch" },
+        "skos:broadMatch": { csv: "skos:broadMatch" },
+        "skos:narrowMatch": { csv: "skos:narrowMatch" },
+        "skos:relatedMatch": { csv: "skos:relatedMatch" },
       },
 
       dropdownExportFormat: [
@@ -393,8 +405,8 @@ export default {
         "CSV",
         "RDF/XML",
         "RDF/TTL",
-        "RDF/jsonLD",
-        "RDF/SSSOM",
+        "RDF/JSON-LD (tbc)",
+        "SSSOM (tbc)",
       ],
       dropdownExtension: ["", "csv", "rdf", "ttl", "json", "sssom"],
       dropdownExportFormatItem: 0,
@@ -458,13 +470,13 @@ export default {
       console.group(`exportRDF as a ${fileExtension}`);
 
       var input = [];
-      var labelReady = [];
+      var labelReady = []; // To prevent doubling
 
       for (var idxSource in this.mappingtable) {
         for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
           // Label source
+          // Check namedNodes
           if (!labelReady.includes(idxSource)) {
-            // Check namedNodes
             input.push(
               rdf.quad(
                 rdf.namedNode("owl:class"),
@@ -472,8 +484,7 @@ export default {
                 rdf.literal(`${idxSource}`)
               )
             );
-
-            // Create new label
+            //   // Create new label
             input.push(
               rdf.quad(
                 rdf.namedNode(`${idxSource}`),
@@ -483,11 +494,9 @@ export default {
                 )
               )
             );
-
             labelReady.push(idxSource);
           }
-
-          // Label Target
+          // // Label Target
           if (!labelReady.includes(idxTarget)) {
             // Check namedNodes
             input.push(
@@ -497,7 +506,6 @@ export default {
                 rdf.literal(`${idxSource}`)
               )
             );
-
             // Create new label
             input.push(
               rdf.quad(
@@ -510,7 +518,6 @@ export default {
             );
             labelReady.push(idxTarget);
           }
-
           input.push(
             rdf.quad(
               rdf.namedNode(`${idxSource}`),
@@ -525,6 +532,7 @@ export default {
           input.push(
             rdf.quad(
               rdf.namedNode(`${idxSource}`),
+
               rdf.namedNode(`${idxTarget}`),
               rdf.literal(
                 // TODO: check that
@@ -532,8 +540,34 @@ export default {
               )
             )
           );
+
+          //////
+          // input.push(
+          //   rdf.quad(
+          //     rdf.namedNode("http://example.org/sheldon-cooper"),
+          //     rdf.namedNode("http://schema.org/givenName"),
+          //     rdf.literal("Sheldon")
+          //   )
+          // );
+          // input.push(
+          //   rdf.quad(
+          //     rdf.namedNode("http://example.org/sheldon-cooper"),
+          //     rdf.namedNode("http://schema.org/familyName"),
+          //     rdf.literal("Cooper")
+          //   )
+          // );
+          // input.push(
+          //   rdf.quad(
+          //     rdf.namedNode("http://example.org/sheldon-cooper"),
+          //     rdf.namedNode("http://schema.org/knows"),
+          //     rdf.namedNode("http://example.org/amy-farrah-fowler")
+          //   )
+          // );
+
+          //////
         }
       }
+      console.log(input);
 
       const { schema, dcterms, foaf, rdfs } = prefixes;
       var sink;
@@ -562,16 +596,19 @@ export default {
 
         runExportFlag = true;
       } else if (fileExtension === "json") {
-        sink = await jsonld({
-          prefixes: {
-            schema,
-            dcterms,
-            foaf,
-            rdfs,
-          },
-        });
+        console.log("jsonLD");
+        console.log("sssom: work in progres");
 
-        runExportFlag = true;
+        // sink = await jsonld({
+        //   prefixes: {
+        //     schema,
+        //     dcterms,
+        //     foaf,
+        //     rdfs,
+        //   },
+        // });
+
+        runExportFlag = false;
       } else if (fileExtension === "sssom") {
         console.log("sssom: work in progres");
         // sink = await jsonld({
@@ -587,9 +624,14 @@ export default {
       }
 
       if (runExportFlag) {
-        const stream = await sink.import(Readable.from(input));
-        let content = await getStream(stream);
+        const streamtest = Readable.from(input);
+        console.log("stream", streamtest);
 
+        console.log("Try to create a stream with sink");
+        const stream = await sink.import(Readable.from(input));
+
+        let content = await getStream(stream);
+        console.log("Content created", content);
         this.downloadMappingExport(content, fileExtension);
       }
       console.groupEnd();
@@ -769,6 +811,8 @@ export default {
           */
 
           var mappingtableRows = e.target.result.split("\n");
+          mappingtableRows.pop();
+          console.log("mappingtableRows", mappingtableRows);
 
           for (var cell of mappingtableRows) {
             var cellInRow = cell.split(",");
@@ -970,7 +1014,10 @@ export default {
 
       // console.group("refreshMappingtableUI");
       var currentState = [];
+      console.log("this.mappingtable", this.mappingtable);
+
       for (var idxSource in this.mappingtable) {
+        console.log("idxSource", idxSource);
         for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
           currentState.push({
             relation: this.mappingtable[idxSource][idxTarget]["relation"]
@@ -985,17 +1032,19 @@ export default {
         }
       }
 
-      if (currentState.length == 0) {
-        currentState.push({
-          relation: "",
-          sourceTitle: "",
-          sourceLink: "",
-          targetTitle: "",
-          targetLink: "",
-          comment: "",
-        });
-      }
+      // if (currentState.length == 0) {
+      //   currentState.push({
+      //     relation: "",
+      //     sourceTitle: "",
+      //     sourceLink: "",
+      //     targetTitle: "",
+      //     targetLink: "",
+      //     comment: "",
+      //   });
+      // }
+      console.log("currentState", currentState);
       window.mappingDataTable.load(currentState);
+
       // console.groupEnd();
     },
 
@@ -1042,6 +1091,8 @@ export default {
       this.tree.reloadKey.target++;
 
       this.selectValue();
+      this.updateHeight();
+
       // console.groupEnd();
     },
 
@@ -1096,6 +1147,23 @@ export default {
 
       console.groupEnd();
     },
+
+    updateHeight() {
+      var clearMyInterval = (param = this.intervalPerformance) =>
+        clearInterval(param);
+
+      this.intervalPerformance = setInterval(function () {
+        var treesToHandle = document.getElementsByClassName(
+          "vue-treeselect__menu"
+        );
+        for (var item of treesToHandle) {
+          if (item.style["max-height"]) {
+            item.style.removeProperty("max-height");
+            clearMyInterval();
+          }
+        }
+      }, 100);
+    },
   },
 
   computed: /* OK */ {
@@ -1115,6 +1183,7 @@ export default {
   async mounted() /* OK */ {
     window.mappingDataTable = new AppendGrid({
       element: document.getElementById("mapppingtableCSV"),
+      initRows: 0,
       uiFramework: "bulma",
       iconFramework: "default",
       hideButtons: {
