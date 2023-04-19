@@ -379,7 +379,7 @@ export default {
       },
 
       rdfObj: {
-        engines: { source: {}, target: {}, mapping: {} },
+        engines: { source: [], target: [], mapping: {} },
       },
       query: query, // external stored queries for a better readability
 
@@ -417,7 +417,6 @@ export default {
 
   methods: {
     // Exports
-
     downloadMappingExport(txtContent, fileExtension) {
       var exportElement = document.createElement("a");
       exportElement.href =
@@ -645,79 +644,78 @@ export default {
 
       // reset the widget
       this.resetArrows();
-
       this.tree.options[position] = [];
+      this.rdfObj.engines[position] = [];
 
-      // Load a local file
-      var file = event.target.files[0];
-      let fileExtension = event.target.files[0].name
-        .split(".")
-        .slice(-1)[0]
-        .toLowerCase();
+      // Load local files
+      for (let file of event.target.files) {
+        let fileExtension = file.name.split(".").slice(-1)[0].toLowerCase();
 
-      var reader = new FileReader();
-      let mimeType = ""; // "text/turtle" or "application/rdf+xml"
+        let reader = new FileReader();
+        let mimeType = ""; // "text/turtle" or "application/rdf+xml"
 
-      // Reader definition
-      reader.onload = async (e, that = this) => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const ontologyStream = require("streamify-string")(e.target.result);
+        // Reader definition
+        reader.onload = async (e, that = this) => {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const ontologyStream = require("streamify-string")(e.target.result);
 
-        const quadStream = rdfParser.parse(ontologyStream, {
-          contentType: mimeType,
-          baseIRI: "http://example.org",
-        });
+          const quadStream = rdfParser.parse(ontologyStream, {
+            contentType: mimeType,
+            baseIRI: "http://example.org",
+          });
 
-        const store = await storeStream(quadStream);
-        that.rdfObj.engines[position] = new Engine(store);
+          const store = await storeStream(quadStream);
+          that.rdfObj.engines[position].push(new Engine(store));
+          let idxEngine = that.rdfObj.engines[position].length - 1;
 
-        // First level visualisation
-        var bindingsStream = await that.rdfObj.engines[position].queryBindings(
-          that.query.firstLevelClass
-        );
+          // First level visualisation
+          var bindingsStream = await that.rdfObj.engines[position][
+            idxEngine
+          ].queryBindings(that.query.firstLevelClass);
 
-        bindingsStream.on("data", (bindings) => {
-          const id =
-            bindings.entries.hashmap.node.children[0].value.id.replaceAll(
-              '"',
-              ""
-            ) + `_${position}`;
-          that.tree.options[position].push({
-            id: id,
-            label:
-              bindings.entries.hashmap.node.children[1].value.id.replaceAll(
+          bindingsStream.on("data", (bindings) => {
+            const id =
+              bindings.entries.hashmap.node.children[0].value.id.replaceAll(
                 '"',
                 ""
-              ),
-            children: null,
-            position: position, // for the sparql engine
+              ) + `_${position}`;
+            that.tree.options[position].push({
+              id: id,
+              label:
+                bindings.entries.hashmap.node.children[1].value.id.replaceAll(
+                  '"',
+                  ""
+                ),
+              children: null,
+              position: position, // for the sparql engine (source or engine, left or right)
+            });
           });
-        });
-        bindingsStream.on("end", () => {
-          var treesToHandle = document.getElementsByClassName(
-            "vue-treeselect__menu"
-          );
-          for (var item of treesToHandle) {
-            item.style.removeProperty("max-height");
-          }
-          console.log("ready");
-        });
-      };
+          bindingsStream.on("end", () => {
+            var treesToHandle = document.getElementsByClassName(
+              "vue-treeselect__menu"
+            );
+            for (var item of treesToHandle) {
+              item.style.removeProperty("max-height");
+            }
+            console.log("ready");
+          });
+        };
 
-      // Read file
-      // TTL
-      if (fileExtension == "ttl") {
-        mimeType = "text/turtle";
-        reader.readAsText(file);
-      }
-      // RDF/XML
-      else if (fileExtension == "rdf" || fileExtension == "xml") {
-        mimeType = "application/rdf+xml";
-        reader.readAsText(file);
-      }
-      // ERROR
-      else {
-        // TODO: ERROR
+        // Read file
+        // TTL
+        if (fileExtension == "ttl") {
+          mimeType = "text/turtle";
+          reader.readAsText(file);
+        }
+        // RDF/XML
+        else if (fileExtension == "rdf" || fileExtension == "xml") {
+          mimeType = "application/rdf+xml";
+          reader.readAsText(file);
+        }
+        // ERROR
+        else {
+          // TODO: ERROR
+        }
       }
 
       console.groupEnd();
@@ -736,33 +734,34 @@ export default {
 
       var query = this.query.subclassOf.replaceAll("ID_HERE", id);
 
-      var bindingsStream = await this.rdfObj.engines[position].queryBindings(
-        query
-      );
+      for (var singleEngine of this.rdfObj.engines[position]) {
+        var bindingsStream = await singleEngine.queryBindings(query);
 
-      bindingsStream.on("data", (bindings) => {
-        console.log("bindings", bindings);
-        const childID =
-          bindings.entries.hashmap.node.children[1].value.id.replaceAll(
-            '"',
-            ""
-          ) + `_${position}`;
-        tempChild.push({
-          id: childID,
-          label: bindings.entries.hashmap.node.children[0].value.id.replaceAll(
-            '"',
-            ""
-          ),
-          children: null,
-          position: position, // for the sparql engine
+        bindingsStream.on("data", (bindings) => {
+          console.log("bindings", bindings);
+          const childID =
+            bindings.entries.hashmap.node.children[1].value.id.replaceAll(
+              '"',
+              ""
+            ) + `_${position}`;
+          tempChild.push({
+            id: childID,
+            label:
+              bindings.entries.hashmap.node.children[0].value.id.replaceAll(
+                '"',
+                ""
+              ),
+            children: null,
+            position: position, // for the sparql engine
+          });
         });
-      });
 
-      bindingsStream.on("end", () => {
-        console.log("tempChild", tempChild[0]);
-        parentNode.children = tempChild;
-        param.callback();
-      });
+        bindingsStream.on("end", () => {
+          console.log("tempChild", tempChild[0]);
+          parentNode.children = tempChild;
+          param.callback();
+        });
+      }
 
       console.groupEnd();
     },
