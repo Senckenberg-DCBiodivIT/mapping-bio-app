@@ -186,7 +186,7 @@
         :alwaysOpen="true"
         :open-direction="'bottom'"
         :load-options="loadOntologyChild"
-        :default-expand-level="20"
+        :default-expand-level="2"
       />
     </div>
     <div class="column" />
@@ -229,7 +229,7 @@
         :alwaysOpen="true"
         :open-direction="'bottom'"
         :load-options="loadOntologyChild"
-        :default-expand-level="20"
+        :default-expand-level="2"
       />
     </div>
   </div>
@@ -246,11 +246,10 @@ import LeaderLine from "leader-line-new";
 
 // Mapping table
 import AppendGrid from "jquery.appendgrid";
-</script>
 
-<script>
 // RDF
 import rdfParser from "rdf-parse";
+import rdf from "@rdfjs/data-model";
 
 // Quadstore & Co
 import { Engine } from "quadstore-comunica";
@@ -260,19 +259,18 @@ import { query } from "@/components/query";
 // Export RDF
 import { Readable } from "readable-stream";
 
-import rdf from "@rdfjs/data-model";
-
 import prefixes from "@zazuko/rdf-vocabularies/prefixes";
+
 import {
   turtle,
   rdfXml,
   jsonld,
 } from "@rdfjs-elements/formats-pretty/serializers";
+
 import getStream from "get-stream";
+</script>
 
-// Test jsonLD
-import SerializerJsonld from "@rdfjs/serializer-jsonld-ext";
-
+<script>
 export default {
   name: "Home-SGN",
   // mixins: [CordraMixin],
@@ -644,8 +642,8 @@ export default {
 
       // reset the widget
       this.resetArrows();
-      this.tree.options[position] = [];
-      this.rdfObj.engines[position] = [];
+      this.tree.options[position] = []; // Reset Nodes in the tree
+      this.rdfObj.engines[position] = []; //
 
       // Load local files
       for (let file of event.target.files) {
@@ -674,6 +672,8 @@ export default {
           ].queryBindings(that.query.firstLevelClass);
 
           bindingsStream.on("data", (bindings) => {
+            console.log("bindings", bindings);
+
             const id =
               bindings.entries.hashmap.node.children[0].value.id.replaceAll(
                 '"',
@@ -690,6 +690,9 @@ export default {
               position: position, // for the sparql engine (source or engine, left or right)
             });
           });
+
+          bindingsStream.on("error", (error) => console.log(error));
+
           bindingsStream.on("end", () => {
             var treesToHandle = document.getElementsByClassName(
               "vue-treeselect__menu"
@@ -709,6 +712,7 @@ export default {
         }
         // RDF/XML
         else if (fileExtension == "rdf" || fileExtension == "xml") {
+          console.log("RDF detected");
           mimeType = "application/rdf+xml";
           reader.readAsText(file);
         }
