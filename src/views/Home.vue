@@ -186,8 +186,8 @@
         :alwaysOpen="true"
         :open-direction="'bottom'"
         :load-options="loadOntologyChild"
-        :default-expand-level="2"
       />
+      <!-- :default-expand-level="1" -->
     </div>
     <div class="column" />
 
@@ -229,8 +229,8 @@
         :alwaysOpen="true"
         :open-direction="'bottom'"
         :load-options="loadOntologyChild"
-        :default-expand-level="2"
       />
+      <!-- :default-expand-level="2" -->
     </div>
   </div>
 </template>
@@ -371,9 +371,10 @@ export default {
       arrows: [],
 
       tree: {
-        value: { source: [], target: [] },
-        options: { source: [], target: [] },
-        reloadKey: { source: 0, target: 0 },
+        value: { source: [], target: [] }, // selected items
+        options: { source: [], target: [] }, // tree content
+        reloadKey: { source: 0, target: 0 }, // reload index for VUE reloads
+        skos_flag: { source: false, target: false }, // we need to modify queries if it's a skos notation
       },
 
       rdfObj: {
@@ -568,7 +569,7 @@ export default {
       }
       console.log(input);
 
-      const { schema, dcterms, foaf, rdfs } = prefixes;
+      const { schema, dcterms, foaf, rdfs, skos } = prefixes;
       var sink;
       var runExportFlag = false;
 
@@ -579,6 +580,7 @@ export default {
             dcterms,
             foaf,
             rdfs,
+            skos,
           },
         });
 
@@ -590,6 +592,7 @@ export default {
             dcterms,
             foaf,
             rdfs,
+            skos,
           },
         });
 
@@ -604,6 +607,7 @@ export default {
         //     dcterms,
         //     foaf,
         //     rdfs,
+        // skos
         //   },
         // });
 
@@ -616,6 +620,7 @@ export default {
         //     dcterms,
         //     foaf,
         //     rdfs,
+        // skos
         //   },
         // });
 
@@ -642,7 +647,10 @@ export default {
 
       // reset the widget
       this.resetArrows();
+
       this.tree.options[position] = []; // Reset Nodes in the tree
+      var tree_options = []; // temp structure
+
       this.rdfObj.engines[position] = []; //
 
       // Load local files
@@ -666,11 +674,22 @@ export default {
           that.rdfObj.engines[position].push(new Engine(store));
           let idxEngine = that.rdfObj.engines[position].length - 1;
 
-          // First level visualisation
-          var bindingsStream = await that.rdfObj.engines[position][
-            idxEngine
-          ].queryBindings(that.query.firstLevelClass);
+          // Detect if skos
+          this.tree.skos_flag[position] =
+            e.target.result.includes("xmlns:skos");
 
+          // First level visualisation
+          var bindingsStream = null;
+
+          if (this.tree.skos_flag[position]) {
+            bindingsStream = await that.rdfObj.engines[position][
+              idxEngine
+            ].queryBindings(that.query.firstLevelClass_SKOS);
+          } else {
+            bindingsStream = await that.rdfObj.engines[position][
+              idxEngine
+            ].queryBindings(that.query.firstLevelClass_OWL);
+          }
           bindingsStream.on("data", (bindings) => {
             console.log("bindings", bindings);
 
@@ -679,21 +698,45 @@ export default {
                 '"',
                 ""
               ) + `_${position}`;
-            that.tree.options[position].push({
-              id: id,
-              label:
-                bindings.entries.hashmap.node.children[1].value.id.replaceAll(
-                  '"',
-                  ""
-                ),
-              children: null,
-              position: position, // for the sparql engine (source or engine, left or right)
-            });
+
+            var oldEneteryFlag = false;
+            // You can use only "@en" labels. On this way "en-US" is valid too
+
+            let labelValid =
+              (this.tree.skos_flag[position] &&
+                bindings.entries.hashmap.node.children[1].value.id.includes(
+                  "@en"
+                )) ||
+              !this.tree.skos_flag[position];
+
+            if (labelValid) {
+              for (var treeItem of tree_options) {
+                if (treeItem.id == id) {
+                  oldEneteryFlag = true;
+                }
+              }
+
+              if (!oldEneteryFlag) {
+                tree_options.push({
+                  id: id,
+                  label:
+                    bindings.entries.hashmap.node.children[1].value.id.replaceAll(
+                      '"',
+                      ""
+                    ),
+                  children: null,
+                  position: position, // for the sparql engine (source or engine, left or right)
+                });
+              }
+            }
           });
 
           bindingsStream.on("error", (error) => console.log(error));
 
           bindingsStream.on("end", () => {
+            console.log("tree_options", tree_options);
+            that.tree.options[position] = tree_options;
+
             var treesToHandle = document.getElementsByClassName(
               "vue-treeselect__menu"
             );

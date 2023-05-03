@@ -1,15 +1,45 @@
 export const query = {
-  firstLevelClass: `
+  testQuery: `
+  PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+        prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
+        prefix owl: <http://www.w3.org/2002/07/owl#>
+		    prefix skos:<http://www.w3.org/2004/02/skos/core#>
+
+    SELECT ?subject ?label
+    WHERE {
+      ?subject a skos:Concept .
+      ?subject skos:prefLabel ?label .
+    }
+    `,
+
+  firstLevelClass_SKOS: `
     PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
         prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
         prefix owl: <http://www.w3.org/2002/07/owl#>
+        prefix skos:<http://www.w3.org/2004/02/skos/core#>
+
         SELECT ?subject ?label
         WHERE {
-        ?subject a owl:Class .
-        ?subject rdfs:label ?label .
-        
-        FILTER NOT EXISTS { ?subject owl:deprecated "true"^^<http://www.w3.org/2001/XMLSchema#boolean> }
-        FILTER NOT EXISTS { ?subject rdfs:subClassOf ?any }
+          ?subject a skos:Concept .
+          ?subject skos:prefLabel ?label .
+          
+          FILTER NOT EXISTS { ?subject skos:broader ?any }
+    }
+    `,
+
+  firstLevelClass_OWL: `
+    PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+        prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
+        prefix owl: <http://www.w3.org/2002/07/owl#>
+        prefix skos:<http://www.w3.org/2004/02/skos/core#>
+
+        SELECT ?subject ?label
+        WHERE {
+          ?subject a owl:Class .
+          ?subject rdfs:label ?label .
+          
+          #FILTER NOT EXISTS { ?subject owl:deprecated "true"^^<http://www.w3.org/2001/XMLSchema#boolean> }
+          #FILTER NOT EXISTS { ?subject rdfs:subClassOf ?any }
     }
     `,
 
@@ -43,7 +73,6 @@ WHERE {
   ?subject align:relation ?relation .
   ?subject align:measure ?measure .
 }
-
   `,
 
   getName: `
@@ -56,7 +85,6 @@ prefix align: <http://knowledgeweb.semanticweb.org/heterogeneity/alignment#>
 SELECT ?name 
 WHERE {
   <ID_HERE> rdfs:label ?name .
-
 }
   `,
 };
