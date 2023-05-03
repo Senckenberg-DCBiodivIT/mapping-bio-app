@@ -38,12 +38,12 @@ export const query = {
           ?subject a owl:Class .
           ?subject rdfs:label ?label .
           
-          #FILTER NOT EXISTS { ?subject owl:deprecated "true"^^<http://www.w3.org/2001/XMLSchema#boolean> }
-          #FILTER NOT EXISTS { ?subject rdfs:subClassOf ?any }
+          FILTER NOT EXISTS { ?subject owl:deprecated "true"^^<http://www.w3.org/2001/XMLSchema#boolean> }
+          FILTER NOT EXISTS { ?subject rdfs:subClassOf ?any }
     }
     `,
 
-  subclassOf: `
+  subclassOf_OWL: `
   PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
         prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
         prefix owl: <http://www.w3.org/2002/07/owl#>
@@ -53,6 +53,19 @@ export const query = {
           
         ?class rdfs:subClassOf <ID_HERE> .
         ?class rdfs:label ?label .
+    } 
+  `,
+
+  subclassOf_SKOS: `
+  PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+        prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
+        prefix owl: <http://www.w3.org/2002/07/owl#>
+        
+        SELECT ?class ?label
+        WHERE {
+          
+        ?class skos:broader <ID_HERE> .
+        ?class skos:prefLabel ?label .
     } 
   `,
 

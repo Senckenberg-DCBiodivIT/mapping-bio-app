@@ -645,7 +645,7 @@ export default {
     loadOntology(event, position) /**/ {
       console.group("loadOntology", position);
 
-      // reset the widget
+      // Reset the widget
       this.resetArrows();
 
       this.tree.options[position] = []; // Reset Nodes in the tree
@@ -779,7 +779,12 @@ export default {
       var position = param.parentNode.position;
       var parentNode = param.parentNode;
 
-      var query = this.query.subclassOf.replaceAll("ID_HERE", id);
+      var query = "";
+      if (this.tree.skos_flag[position]) {
+        query = this.query.subclassOf_SKOS.replaceAll("ID_HERE", id);
+      } else {
+        query = this.query.subclassOf_OWL.replaceAll("ID_HERE", id);
+      }
 
       for (var singleEngine of this.rdfObj.engines[position]) {
         var bindingsStream = await singleEngine.queryBindings(query);
@@ -804,7 +809,7 @@ export default {
         });
 
         bindingsStream.on("end", () => {
-          console.log("tempChild", tempChild[0]);
+          // console.log("tempChild", tempChild[0]);
           parentNode.children = tempChild;
           param.callback();
         });
