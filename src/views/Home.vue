@@ -796,16 +796,37 @@ export default {
               '"',
               ""
             ) + `_${position}`;
-          tempChild.push({
-            id: childID,
-            label:
-              bindings.entries.hashmap.node.children[0].value.id.replaceAll(
-                '"',
-                ""
-              ),
-            children: null,
-            position: position, // for the sparql engine
-          });
+
+          var oldEneteryFlag = false;
+          // You can use only "@en" labels. On this way "en-US" is valid too
+
+          let labelValid =
+            (this.tree.skos_flag[position] &&
+              bindings.entries.hashmap.node.children[0].value.id.includes(
+                "@en"
+              )) ||
+            !this.tree.skos_flag[position];
+
+          if (labelValid) {
+            for (var treeItem of tempChild) {
+              if (treeItem.id == id) {
+                oldEneteryFlag = true;
+              }
+            }
+          }
+
+          if (!oldEneteryFlag && labelValid) {
+            tempChild.push({
+              id: childID,
+              label:
+                bindings.entries.hashmap.node.children[0].value.id.replaceAll(
+                  '"',
+                  ""
+                ),
+              children: null,
+              position: position, // for the sparql engine
+            });
+          }
         });
 
         bindingsStream.on("end", () => {
