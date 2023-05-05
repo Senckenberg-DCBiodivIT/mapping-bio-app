@@ -186,8 +186,8 @@
         :alwaysOpen="true"
         :open-direction="'bottom'"
         :load-options="loadOntologyChild"
-        :default-expand-level="20"
       />
+      <!-- :default-expand-level="1" -->
     </div>
     <div class="column" />
 
@@ -229,8 +229,8 @@
         :alwaysOpen="true"
         :open-direction="'bottom'"
         :load-options="loadOntologyChild"
-        :default-expand-level="20"
       />
+      <!-- :default-expand-level="2" -->
     </div>
   </div>
 </template>
@@ -246,11 +246,10 @@ import LeaderLine from "leader-line-new";
 
 // Mapping table
 import AppendGrid from "jquery.appendgrid";
-</script>
 
-<script>
 // RDF
 import rdfParser from "rdf-parse";
+import rdf from "@rdfjs/data-model";
 
 // Quadstore & Co
 import { Engine } from "quadstore-comunica";
@@ -260,19 +259,18 @@ import { query } from "@/components/query";
 // Export RDF
 import { Readable } from "readable-stream";
 
-import rdf from "@rdfjs/data-model";
-
 import prefixes from "@zazuko/rdf-vocabularies/prefixes";
+
 import {
   turtle,
   rdfXml,
   jsonld,
 } from "@rdfjs-elements/formats-pretty/serializers";
+
 import getStream from "get-stream";
+</script>
 
-// Test jsonLD
-import SerializerJsonld from "@rdfjs/serializer-jsonld-ext";
-
+<script>
 export default {
   name: "Home-SGN",
   // mixins: [CordraMixin],
@@ -373,9 +371,10 @@ export default {
       arrows: [],
 
       tree: {
-        value: { source: [], target: [] },
-        options: { source: [], target: [] },
-        reloadKey: { source: 0, target: 0 },
+        value: { source: [], target: [] }, // selected items
+        options: { source: [], target: [] }, // tree content
+        reloadKey: { source: 0, target: 0 }, // reload index for VUE reloads
+        skos_flag: { source: false, target: false }, // we need to modify queries if it's a skos notation
       },
 
       rdfObj: {
@@ -570,7 +569,7 @@ export default {
       }
       console.log(input);
 
-      const { schema, dcterms, foaf, rdfs } = prefixes;
+      const { schema, dcterms, foaf, rdfs, skos } = prefixes;
       var sink;
       var runExportFlag = false;
 
@@ -581,6 +580,7 @@ export default {
             dcterms,
             foaf,
             rdfs,
+            skos,
           },
         });
 
@@ -592,6 +592,7 @@ export default {
             dcterms,
             foaf,
             rdfs,
+            skos,
           },
         });
 
@@ -606,6 +607,7 @@ export default {
         //     dcterms,
         //     foaf,
         //     rdfs,
+        // skos
         //   },
         // });
 
@@ -618,6 +620,7 @@ export default {
         //     dcterms,
         //     foaf,
         //     rdfs,
+        // skos
         //   },
         // });
 
@@ -642,10 +645,13 @@ export default {
     loadOntology(event, position) /**/ {
       console.group("loadOntology", position);
 
-      // reset the widget
+      // Reset the widget
       this.resetArrows();
-      this.tree.options[position] = [];
-      this.rdfObj.engines[position] = [];
+
+      this.tree.options[position] = []; // Reset Nodes in the tree
+      var tree_options = []; // temp structure
+
+      this.rdfObj.engines[position] = []; //
 
       // Load local files
       for (let file of event.target.files) {
@@ -668,29 +674,69 @@ export default {
           that.rdfObj.engines[position].push(new Engine(store));
           let idxEngine = that.rdfObj.engines[position].length - 1;
 
-          // First level visualisation
-          var bindingsStream = await that.rdfObj.engines[position][
-            idxEngine
-          ].queryBindings(that.query.firstLevelClass);
+          // Detect if skos
+          this.tree.skos_flag[position] =
+            e.target.result.includes("xmlns:skos");
 
+          // First level visualisation
+          var bindingsStream = null;
+
+          if (this.tree.skos_flag[position]) {
+            bindingsStream = await that.rdfObj.engines[position][
+              idxEngine
+            ].queryBindings(that.query.firstLevelClass_SKOS);
+          } else {
+            bindingsStream = await that.rdfObj.engines[position][
+              idxEngine
+            ].queryBindings(that.query.firstLevelClass_OWL);
+          }
           bindingsStream.on("data", (bindings) => {
+            console.log("bindings", bindings);
+
             const id =
               bindings.entries.hashmap.node.children[0].value.id.replaceAll(
                 '"',
                 ""
               ) + `_${position}`;
-            that.tree.options[position].push({
-              id: id,
-              label:
-                bindings.entries.hashmap.node.children[1].value.id.replaceAll(
-                  '"',
-                  ""
-                ),
-              children: null,
-              position: position, // for the sparql engine (source or engine, left or right)
-            });
+
+            var oldEneteryFlag = false;
+            // You can use only "@en" labels. On this way "en-US" is valid too
+
+            let labelValid =
+              (this.tree.skos_flag[position] &&
+                bindings.entries.hashmap.node.children[1].value.id.includes(
+                  "@en"
+                )) ||
+              !this.tree.skos_flag[position];
+
+            if (labelValid) {
+              for (var treeItem of tree_options) {
+                if (treeItem.id == id) {
+                  oldEneteryFlag = true;
+                }
+              }
+
+              if (!oldEneteryFlag) {
+                tree_options.push({
+                  id: id,
+                  label:
+                    bindings.entries.hashmap.node.children[1].value.id.replaceAll(
+                      '"',
+                      ""
+                    ),
+                  children: null,
+                  position: position, // for the sparql engine (source or engine, left or right)
+                });
+              }
+            }
           });
+
+          bindingsStream.on("error", (error) => console.log(error));
+
           bindingsStream.on("end", () => {
+            console.log("tree_options", tree_options);
+            that.tree.options[position] = tree_options;
+
             var treesToHandle = document.getElementsByClassName(
               "vue-treeselect__menu"
             );
@@ -709,6 +755,7 @@ export default {
         }
         // RDF/XML
         else if (fileExtension == "rdf" || fileExtension == "xml") {
+          console.log("RDF detected");
           mimeType = "application/rdf+xml";
           reader.readAsText(file);
         }
@@ -732,7 +779,12 @@ export default {
       var position = param.parentNode.position;
       var parentNode = param.parentNode;
 
-      var query = this.query.subclassOf.replaceAll("ID_HERE", id);
+      var query = "";
+      if (this.tree.skos_flag[position]) {
+        query = this.query.subclassOf_SKOS.replaceAll("ID_HERE", id);
+      } else {
+        query = this.query.subclassOf_OWL.replaceAll("ID_HERE", id);
+      }
 
       for (var singleEngine of this.rdfObj.engines[position]) {
         var bindingsStream = await singleEngine.queryBindings(query);
@@ -744,20 +796,41 @@ export default {
               '"',
               ""
             ) + `_${position}`;
-          tempChild.push({
-            id: childID,
-            label:
-              bindings.entries.hashmap.node.children[0].value.id.replaceAll(
-                '"',
-                ""
-              ),
-            children: null,
-            position: position, // for the sparql engine
-          });
+
+          var oldEneteryFlag = false;
+          // You can use only "@en" labels. On this way "en-US" is valid too
+
+          let labelValid =
+            (this.tree.skos_flag[position] &&
+              bindings.entries.hashmap.node.children[0].value.id.includes(
+                "@en"
+              )) ||
+            !this.tree.skos_flag[position];
+
+          if (labelValid) {
+            for (var treeItem of tempChild) {
+              if (treeItem.id == id) {
+                oldEneteryFlag = true;
+              }
+            }
+          }
+
+          if (!oldEneteryFlag && labelValid) {
+            tempChild.push({
+              id: childID,
+              label:
+                bindings.entries.hashmap.node.children[0].value.id.replaceAll(
+                  '"',
+                  ""
+                ),
+              children: null,
+              position: position, // for the sparql engine
+            });
+          }
         });
 
         bindingsStream.on("end", () => {
-          console.log("tempChild", tempChild[0]);
+          // console.log("tempChild", tempChild[0]);
           parentNode.children = tempChild;
           param.callback();
         });
