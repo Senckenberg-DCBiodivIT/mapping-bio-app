@@ -345,6 +345,18 @@ export default {
         },
 
         {
+          name: "confidence",
+          display: "confidence (sssom)",
+          type: "text",
+        },
+
+        {
+          name: "review",
+          display: "Review (sssom)",
+          type: "checkbox",
+          cellClass: "has-text-centered",
+        },
+        {
           name: "comment",
           display: "Comment",
           type: "text",
@@ -432,9 +444,140 @@ export default {
       if (this.dropdownExportFormatItem > 0) {
         if (this.dropdownExportFormatItem == 1) {
           this.exportCSV();
+        } else if (this.dropdownExportFormatItem == 5) {
+          this.exportSSSOMasJSONLD();
         } else
           this.exportRDF(this.dropdownExtension[this.dropdownExportFormatItem]);
       }
+      console.groupEnd();
+    },
+
+    async exportSSSOMasJSONLD() {
+      // Export SSSOM here as a json-ld for Cordra and other purposes
+      console.group("exportSSSOMasJSONLD");
+
+      var input = [];
+      var mappingSet = [];
+      var singleMappings = [];
+      var singleMappingsIDs = [];
+
+      // Clean data
+      for (var idxSource in this.mappingtable) {
+        var clean_idxSource = this.cleanSuffix(idxSource);
+        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
+          var clean_idxTarget = this.cleanSuffix(idxTarget);
+
+          // Create mapping node
+          input.push(
+            rdf.quad(
+              rdf.namedNode(clean_idxSource),
+              rdf.namedNode(
+                this.mappingtable[idxSource][idxTarget]["relation"]
+              ),
+              rdf.namedNode(clean_idxTarget)
+            )
+          );
+
+          let singleMappingsID = `${clean_idxSource}_${clean_idxTarget}`;
+          singleMappingsIDs.push(singleMappingsID);
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("rdf:type"),
+              rdf.namedNode("owl:Axiom")
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:comment"),
+              rdf.literal(this.mappingtable[idxSource][idxTarget]["comment"])
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:imports"),
+              rdf.literal("")
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(`${clean_idxSource}_${clean_idxTarget}`),
+              rdf.namedNode("sssom:last_updated"),
+              rdf.literal(new Date().toUTCString())
+            )
+          );
+        }
+      }
+
+      // Create mapping set here
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("rdf:type"),
+          rdf.literal("MappingSet")
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_tool"),
+          rdf.literal("mapping.bio")
+        )
+      );
+
+      for (var item of singleMappingsIDs) {
+        mappingSet.push(
+          rdf.quad(
+            rdf.blankNode("MappingSet"),
+            rdf.namedNode("sssom:mappings"),
+            rdf.blankNode(item)
+          )
+        );
+      }
+      // console.log("input", input);
+      // console.log("singleMappings", singleMappings);
+      // console.log("mappingSet", mappingSet);
+
+      const { schema, dcterms, foaf, rdfs, skos, owl } = prefixes;
+      const sssom = "https://w3id.org/sssom/";
+
+      var runExportFlag = true;
+
+      var sink = await turtle({
+        // var sink = await rdfXml({
+        // var sink = await jsonld({
+        prefixes: {
+          schema,
+          dcterms,
+          foaf,
+          rdfs,
+          skos,
+          owl,
+          sssom,
+        },
+      });
+      // console.log("sink", sink);
+
+      if (runExportFlag) {
+        var exportArray = input.concat(mappingSet).concat(singleMappings);
+        console.log("exportArray", exportArray);
+
+        console.log("Try to create a stream with sink");
+        const stream = await sink.import(Readable.from(exportArray));
+
+        let content = await getStream(stream);
+        console.log("Content created", content);
+        this.downloadMappingExport(content, "ttl"); // TODO: set json later
+      }
+
       console.groupEnd();
     },
 
@@ -473,21 +616,27 @@ export default {
       var labelReady = []; // To prevent doubling
 
       for (var idxSource in this.mappingtable) {
+        // Clean data
+        var clean_idxSource = this.cleanSuffix(idxSource);
+
         for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
           // Label source
-          // Check namedNodes
+
+          // Clean data
+          var clean_idxTarget = this.cleanSuffix(idxTarget);
+
           if (!labelReady.includes(idxSource)) {
             input.push(
               rdf.quad(
                 rdf.namedNode("owl:class"),
                 rdf.namedNode("id"),
-                rdf.literal(`${idxSource}`)
+                rdf.literal(`${clean_idxSource}`)
               )
             );
             //   // Create new label
             input.push(
               rdf.quad(
-                rdf.namedNode(`${idxSource}`),
+                rdf.namedNode(`${clean_idxSource}`),
                 rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
                 rdf.literal(
                   this.mappingtable[idxSource][idxTarget]["sourceTitle"]
@@ -503,13 +652,13 @@ export default {
               rdf.quad(
                 rdf.namedNode("owl:class"),
                 rdf.namedNode("id"),
-                rdf.literal(`${idxSource}`)
+                rdf.literal(`${clean_idxTarget}`)
               )
             );
             // Create new label
             input.push(
               rdf.quad(
-                rdf.namedNode(`${idxTarget}`),
+                rdf.namedNode(`${clean_idxTarget}`),
                 rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
                 rdf.literal(
                   this.mappingtable[idxSource][idxTarget]["targetTitle"]
@@ -518,53 +667,31 @@ export default {
             );
             labelReady.push(idxTarget);
           }
-          input.push(
-            rdf.quad(
-              rdf.namedNode(`${idxSource}`),
-              rdf.namedNode(`${idxTarget}`),
-              rdf.literal(
-                // TODO: check prefix
-                "rel:" + this.mappingtable[idxSource][idxTarget]["relation"]
-              )
-            )
-          );
 
-          input.push(
-            rdf.quad(
-              rdf.namedNode(`${idxSource}`),
-
-              rdf.namedNode(`${idxTarget}`),
-              rdf.literal(
-                // TODO: check that
-                "mes:" + '"1.0"^^<http://www.w3.org/2001/XMLSchema#float>'
-              )
-            )
-          );
-
-          //////
+          // TODO
           // input.push(
           //   rdf.quad(
-          //     rdf.namedNode("http://example.org/sheldon-cooper"),
-          //     rdf.namedNode("http://schema.org/givenName"),
-          //     rdf.literal("Sheldon")
-          //   )
-          // );
-          // input.push(
-          //   rdf.quad(
-          //     rdf.namedNode("http://example.org/sheldon-cooper"),
-          //     rdf.namedNode("http://schema.org/familyName"),
-          //     rdf.literal("Cooper")
-          //   )
-          // );
-          // input.push(
-          //   rdf.quad(
-          //     rdf.namedNode("http://example.org/sheldon-cooper"),
-          //     rdf.namedNode("http://schema.org/knows"),
-          //     rdf.namedNode("http://example.org/amy-farrah-fowler")
+          //     rdf.namedNode(`${idxSource}`),
+          //     rdf.namedNode(
+          //       // TODO: check prefix
+          //       this.mappingtable[idxSource][idxTarget]["relation"]
+          //       // "TEST_123"
+          //     ),
+          //     rdf.namedNode(`${idxTarget}`)
           //   )
           // );
 
-          //////
+          // input.push(
+          //   rdf.quad(
+          //     rdf.namedNode(`${idxSource}`),
+
+          //     rdf.namedNode(`${idxTarget}`),
+          //     rdf.literal(
+          //       // TODO: check that
+          //       "mes:" + '"1.0"^^<http://www.w3.org/2001/XMLSchema#float>'
+          //     )
+          //   )
+          // );
         }
       }
       console.log(input);
@@ -1237,6 +1364,11 @@ export default {
           }
         }
       }, 100);
+    },
+
+    // Helper
+    cleanSuffix(input) {
+      return input.replace("_source", "").replace("_target", "");
     },
   },
 
