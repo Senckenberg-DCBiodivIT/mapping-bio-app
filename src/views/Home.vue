@@ -478,6 +478,7 @@ export default {
             )
           );
 
+          // Discribe mapping
           let singleMappingsID = `${clean_idxSource}_${clean_idxTarget}`;
           singleMappingsIDs.push(singleMappingsID);
 
@@ -500,10 +501,18 @@ export default {
           singleMappings.push(
             rdf.quad(
               rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:imports"),
-              rdf.literal("")
+              rdf.namedNode("sssom:confidence"),
+              rdf.literal("empty here") // TODO: link data here
             )
           );
+
+          // singleMappings.push(
+          //   rdf.quad(
+          //     rdf.blankNode(singleMappingsID),
+          //     rdf.namedNode("sssom:imports"),
+          //     rdf.literal("")
+          //   )
+          // );
 
           singleMappings.push(
             rdf.quad(
@@ -512,16 +521,77 @@ export default {
               rdf.literal(new Date().toUTCString())
             )
           );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:mapping_cardinality"),
+              rdf.literal("empty here") // TODO: check and put here (1:1 or 1:n. Any other comopsition is not available)
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:mapping_date"),
+              rdf.literal("empty here") // TODO: Use the creation date here
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:mappings"),
+              rdf.literal(`[${clean_idxSource}, ${clean_idxTarget}`)
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:object_id"),
+              rdf.literal(clean_idxTarget)
+            )
+          );
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:object_label"),
+              rdf.literal("Put label here") // TODO: Put label here
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:predicate_id"),
+              rdf.literal(this.mappingtable[idxSource][idxTarget]["relation"])
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:subject_id"),
+              rdf.literal(clean_idxSource)
+            )
+          );
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:subject_label"),
+              rdf.literal("Put label here") // TODO: Put label here
+            )
+          );
         }
       }
 
       // Create mapping set here
-
       mappingSet.push(
         rdf.quad(
           rdf.blankNode("MappingSet"),
           rdf.namedNode("rdf:type"),
-          rdf.literal("MappingSet")
+          rdf.literal("sssom:MappingSet")
         )
       );
 
@@ -529,10 +599,119 @@ export default {
         rdf.quad(
           rdf.blankNode("MappingSet"),
           rdf.namedNode("sssom:mapping_tool"),
-          rdf.literal("mapping.bio")
+          rdf.literal("mapping.bio") // TODO: a link?
+        )
+      );
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_tool_version"),
+          rdf.literal("mapping.bio") // TODO: Use a dynamic value?
         )
       );
 
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_provider"),
+          rdf.literal("https://mapping.bio")
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:comment"),
+          rdf.literal("empty here") // TODO: Create input field
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:imports"),
+          rdf.literal("")
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:last_updated"),
+          rdf.literal(new Date().toUTCString())
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:license"),
+          rdf.literal("empty here") // TODO: Create input field
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_date"),
+          rdf.literal("empty here") // TODO: Use the creation date here
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_registry_description"),
+          rdf.literal("")
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_registry_id"),
+          rdf.literal("")
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_registry_title"),
+          rdf.literal("")
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_set_id"),
+          rdf.literal("") // TODO: a bigger part to do
+        )
+      );
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_set_source"),
+          rdf.literal("") // TODO: open discussion
+        )
+      );
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_set_title"),
+          rdf.literal("")
+        )
+      );
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_set_version"),
+          rdf.literal("") // TODO: Format?
+        )
+      );
+
+      // include single mappings
       for (var item of singleMappingsIDs) {
         mappingSet.push(
           rdf.quad(
@@ -542,9 +721,6 @@ export default {
           )
         );
       }
-      // console.log("input", input);
-      // console.log("singleMappings", singleMappings);
-      // console.log("mappingSet", mappingSet);
 
       const { schema, dcterms, foaf, rdfs, skos, owl } = prefixes;
       const sssom = "https://w3id.org/sssom/";
