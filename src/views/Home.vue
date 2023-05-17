@@ -419,7 +419,7 @@ export default {
         "RDF/XML",
         "RDF/TTL",
         "RDF/JSON-LD (tbc)",
-        "SSSOM (tbc)",
+        "SSSOM (TTL)",
       ],
       dropdownExtension: ["", "csv", "rdf", "ttl", "json", "sssom"],
       dropdownExportFormatItem: 0,
@@ -751,7 +751,7 @@ export default {
 
         let content = await getStream(stream);
         console.log("Content created", content);
-        this.downloadMappingExport(content, "ttl"); // TODO: set json later
+        this.downloadMappingExport(content, "sssom"); // TODO: set json later
       }
 
       console.groupEnd();
