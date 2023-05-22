@@ -6,7 +6,7 @@
   <br />
 
   <!-- mappping table, CSV, RDF projection -->
-  <section>
+  <section class="box">
     <o-collapse
       :open="true"
       aria-id="mappingTableUI_ID"
@@ -105,8 +105,6 @@
 
         <div class="column is-1" />
       </div>
-
-      <hr />
     </o-collapse>
   </section>
 
@@ -116,123 +114,125 @@
   <!-- <br />
   <hr /> -->
   <!-- Debug END -->
+  <div class="block">
+    <!-- TODO: Component mapping table control? -->
+    <div class="has-text-centered" @resize="selectValue">
+      <o-field label="Select mapping relation:" variant="">
+        <o-dropdown aria-role="list" v-model="dropdownSelectedItem">
+          <template #trigger="{ active }">
+            <o-button variant="primary">
+              <span>{{ dropdownItems[dropdownSelectedItem] }}</span>
 
-  <!-- TODO: Component mapping table control? -->
-  <div class="has-text-centered" @resize="selectValue">
-    <o-field label="Select mapping relation:" variant="">
-      <o-dropdown aria-role="list" v-model="dropdownSelectedItem">
-        <template #trigger="{ active }">
-          <o-button variant="primary">
-            <span>{{ dropdownItems[dropdownSelectedItem] }}</span>
+              <o-icon
+                pack="fa"
+                :icon="active ? 'chevron-down' : 'chevron-up'"
+              ></o-icon>
+            </o-button>
+          </template>
 
-            <o-icon
-              pack="fa"
-              :icon="active ? 'chevron-down' : 'chevron-up'"
-            ></o-icon>
-          </o-button>
-        </template>
+          <o-dropdown-item
+            v-for="(item, key) in dropdownItems"
+            :key="key"
+            :value="key"
+            aria-role="listitem"
+          >
+            {{ dropdownItems[key] }}</o-dropdown-item
+          >
+        </o-dropdown>
+      </o-field>
 
-        <o-dropdown-item
-          v-for="(item, key) in dropdownItems"
-          :key="key"
-          :value="key"
-          aria-role="listitem"
+      <o-button :label="'Add mapping'" :variant="'info'" @click="addMapping" />
+    </div>
+
+    <!-- Tree view -->
+    <div class="columns" @click="selectValue">
+      <!-- Component source tree view -->
+      <div class="column is-4">
+        <!-- Button -->
+        <div
+          class="file is-primary is-centered"
+          :class="{ 'has-name': hasSourceFileName }"
         >
-          {{ dropdownItems[key] }}</o-dropdown-item
-        >
-      </o-dropdown>
-    </o-field>
+          <label class="file-label">
+            <input
+              class="file-input"
+              type="file"
+              multiple
+              accept="owl"
+              name="resume"
+              @change="(e) => loadOntology(e, 'source')"
+            />
+            <span class="file-cta">
+              <span class="file-icon">
+                <i class="fas fa-upload"></i>
+              </span>
+              <span class="file-label">Choose a RDF/XML or TTL file…</span>
+            </span>
+            <span class="file-name" v-if="hasSourceFileName"
+              >{{ sourceFilename }}
+            </span>
+          </label>
+        </div>
 
-    <o-button :label="'Add mapping'" :variant="'info'" @click="addMapping" />
+        <!-- Tree -->
+        <treeselect
+          :key="tree.reloadKey.source"
+          v-model="tree.value.source"
+          :flat="true"
+          :multiple="true"
+          :options="tree.options.source"
+          :alwaysOpen="true"
+          :open-direction="'bottom'"
+          :load-options="loadOntologyChild"
+        />
+        <!-- :default-expand-level="1" -->
+      </div>
+      <div class="column" />
+
+      <!-- Component target tree view -->
+      <div class="column is-4">
+        <!-- Button -->
+        <div
+          class="file is-primary is-centered"
+          :class="{ 'has-name': hasTargetFileName }"
+        >
+          <label class="file-label">
+            <input
+              class="file-input"
+              type="file"
+              multiple
+              accept="owl"
+              name="resume"
+              @change="(e) => loadOntology(e, 'target')"
+            />
+            <span class="file-cta">
+              <span class="file-icon">
+                <i class="fas fa-upload"></i>
+              </span>
+              <span class="file-label">Choose a RDF/XML or TTL file…</span>
+            </span>
+            <span class="file-name" v-if="hasTargetFileName"
+              >{{ targetFilename }}
+            </span>
+          </label>
+        </div>
+
+        <!-- Tree -->
+        <treeselect
+          :key="tree.reloadKey.target"
+          v-model="tree.value.target"
+          :flat="true"
+          :multiple="true"
+          :options="tree.options.target"
+          :alwaysOpen="true"
+          :open-direction="'bottom'"
+          :load-options="loadOntologyChild"
+        />
+        <!-- :default-expand-level="2" -->
+      </div>
+    </div>
   </div>
 
-  <!-- Tree view -->
-  <div class="columns" @click="selectValue">
-    <!-- Component source tree view -->
-    <div class="column is-4">
-      <!-- Button -->
-      <div
-        class="file is-primary is-centered"
-        :class="{ 'has-name': hasSourceFileName }"
-      >
-        <label class="file-label">
-          <input
-            class="file-input"
-            type="file"
-            multiple
-            accept="owl"
-            name="resume"
-            @change="(e) => loadOntology(e, 'source')"
-          />
-          <span class="file-cta">
-            <span class="file-icon">
-              <i class="fas fa-upload"></i>
-            </span>
-            <span class="file-label">Choose a RDF/XML or TTL file…</span>
-          </span>
-          <span class="file-name" v-if="hasSourceFileName"
-            >{{ sourceFilename }}
-          </span>
-        </label>
-      </div>
-
-      <!-- Tree -->
-      <treeselect
-        :key="tree.reloadKey.source"
-        v-model="tree.value.source"
-        :flat="true"
-        :multiple="true"
-        :options="tree.options.source"
-        :alwaysOpen="true"
-        :open-direction="'bottom'"
-        :load-options="loadOntologyChild"
-      />
-      <!-- :default-expand-level="1" -->
-    </div>
-    <div class="column" />
-
-    <!-- Component target tree view -->
-    <div class="column is-4">
-      <!-- Button -->
-      <div
-        class="file is-primary is-centered"
-        :class="{ 'has-name': hasTargetFileName }"
-      >
-        <label class="file-label">
-          <input
-            class="file-input"
-            type="file"
-            multiple
-            accept="owl"
-            name="resume"
-            @change="(e) => loadOntology(e, 'target')"
-          />
-          <span class="file-cta">
-            <span class="file-icon">
-              <i class="fas fa-upload"></i>
-            </span>
-            <span class="file-label">Choose a RDF/XML or TTL file…</span>
-          </span>
-          <span class="file-name" v-if="hasTargetFileName"
-            >{{ targetFilename }}
-          </span>
-        </label>
-      </div>
-
-      <!-- Tree -->
-      <treeselect
-        :key="tree.reloadKey.target"
-        v-model="tree.value.target"
-        :flat="true"
-        :multiple="true"
-        :options="tree.options.target"
-        :alwaysOpen="true"
-        :open-direction="'bottom'"
-        :load-options="loadOntologyChild"
-      />
-      <!-- :default-expand-level="2" -->
-    </div>
-  </div>
   <div class="second-step" v-if="openCloseSecondStepView">
     <form class="box">
       <p class="title is-6 has-text-right">
