@@ -7,8 +7,7 @@
 
       <div class="column">
         <div class="has-text-centered ownFont bigText">
-          mapping.bio <br />Mapping Service<br />
-          Prototype {{ version }}
+          mapping.bio <br />Mapping Service V. {{ version }}
         </div>
       </div>
 
