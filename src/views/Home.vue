@@ -77,7 +77,7 @@
           <o-dropdown
             aria-role="list"
             v-model="dropdownExportFormatItem"
-            @update:modelValue="exportMapping"
+            @update:modelValue="showSecondStep"
           >
             <template #trigger="{ active }">
               <o-button variant="primary">
@@ -233,6 +233,58 @@
       <!-- :default-expand-level="2" -->
     </div>
   </div>
+  <div class="second-step" v-if="openCloseSecondStepView">
+    <form class="box">
+      <p class="title is-6 has-text-right">
+        V {{ secondStepData.versionMapper }}
+      </p>
+      <div class="field">
+        <label class="label">Autor</label>
+        <div class="control">
+          <input class="input" type="text" v-model="secondStepData.autor" />
+        </div>
+      </div>
+      <div class="field">
+        <label class="label">Mapping set title</label>
+        <div class="control">
+          <input
+            class="input"
+            type="text"
+            v-model="secondStepData.mappingSetTitle"
+          />
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Comment</label>
+        <div class="control">
+          <textarea
+            class="textarea"
+            rows="2"
+            v-model="secondStepData.comment"
+          />
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">License</label>
+        <div class="control">
+          <input class="input" type="text" v-model="secondStepData.license" />
+        </div>
+      </div>
+
+      <div class="columns">
+        <div class="column has-text-centered">
+          <o-button variant="warning" @click="openCloseSecondStepView = false"
+            >Cancel</o-button
+          >
+        </div>
+        <div class="column has-text-centered">
+          <o-button variant="primary" @click="exportMapping">Download</o-button>
+        </div>
+      </div>
+    </form>
+  </div>
 </template>
 
 <script setup>
@@ -282,6 +334,7 @@ export default {
       intervalPerformance: false,
 
       openCloseTableView: true, // false: closed, true: open
+      openCloseSecondStepView: false, // false: closed, true: open
 
       mappingDataTableConfig: [
         {
@@ -423,6 +476,14 @@ export default {
       ],
       dropdownExtension: ["", "csv", "rdf", "ttl", "json", "sssom"],
       dropdownExportFormatItem: 0,
+
+      secondStepData: {
+        versionMapper: process.env.VUE_APP_VERSION,
+        autor: "",
+        mappingSetTitle: "",
+        comment: "",
+        license: "",
+      },
     };
   },
 
@@ -445,16 +506,16 @@ export default {
         if (this.dropdownExportFormatItem == 1) {
           this.exportCSV();
         } else if (this.dropdownExportFormatItem == 5) {
-          this.exportSSSOMasJSONLD();
+          this.exportSSSOM();
         } else
           this.exportRDF(this.dropdownExtension[this.dropdownExportFormatItem]);
       }
       console.groupEnd();
     },
 
-    async exportSSSOMasJSONLD() {
+    async exportSSSOM() {
       // Export SSSOM here as a json-ld for Cordra and other purposes
-      console.group("exportSSSOMasJSONLD");
+      console.group("exportSSSOM");
 
       var input = [];
       var mappingSet = [];
@@ -505,14 +566,6 @@ export default {
               rdf.literal("empty here") // TODO: link data here
             )
           );
-
-          // singleMappings.push(
-          //   rdf.quad(
-          //     rdf.blankNode(singleMappingsID),
-          //     rdf.namedNode("sssom:imports"),
-          //     rdf.literal("")
-          //   )
-          // );
 
           singleMappings.push(
             rdf.quad(
@@ -587,6 +640,10 @@ export default {
       }
 
       // Create mapping set here
+      // secondStepData: {
+      //   autor: "",
+      // },
+
       mappingSet.push(
         rdf.quad(
           rdf.blankNode("MappingSet"),
@@ -598,15 +655,23 @@ export default {
       mappingSet.push(
         rdf.quad(
           rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:author_label"),
+          rdf.literal(this.secondStepData.autor)
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
           rdf.namedNode("sssom:mapping_tool"),
-          rdf.literal("mapping.bio") // TODO: a link?
+          rdf.literal("mapping.bio")
         )
       );
       mappingSet.push(
         rdf.quad(
           rdf.blankNode("MappingSet"),
           rdf.namedNode("sssom:mapping_tool_version"),
-          rdf.literal("mapping.bio") // TODO: Use a dynamic value?
+          rdf.literal(this.secondStepData.versionMapper)
         )
       );
 
@@ -622,7 +687,7 @@ export default {
         rdf.quad(
           rdf.blankNode("MappingSet"),
           rdf.namedNode("sssom:comment"),
-          rdf.literal("empty here") // TODO: Create input field
+          rdf.literal(this.secondStepData.comment)
         )
       );
 
@@ -646,7 +711,7 @@ export default {
         rdf.quad(
           rdf.blankNode("MappingSet"),
           rdf.namedNode("sssom:license"),
-          rdf.literal("empty here") // TODO: Create input field
+          rdf.literal(this.secondStepData.license)
         )
       );
 
@@ -654,7 +719,7 @@ export default {
         rdf.quad(
           rdf.blankNode("MappingSet"),
           rdf.namedNode("sssom:mapping_date"),
-          rdf.literal("empty here") // TODO: Use the creation date here
+          rdf.literal(new Date().toUTCString()) // TODO: Use the creation date here, if there is an available
         )
       );
 
@@ -686,7 +751,7 @@ export default {
         rdf.quad(
           rdf.blankNode("MappingSet"),
           rdf.namedNode("sssom:mapping_set_id"),
-          rdf.literal("") // TODO: a bigger part to do
+          rdf.literal("") // TODO: a bigger part to do. Use the old one if available
         )
       );
       mappingSet.push(
@@ -700,7 +765,7 @@ export default {
         rdf.quad(
           rdf.blankNode("MappingSet"),
           rdf.namedNode("sssom:mapping_set_title"),
-          rdf.literal("")
+          rdf.literal(this.secondStepData.mappingSetTitle)
         )
       );
       mappingSet.push(
@@ -1546,6 +1611,16 @@ export default {
     cleanSuffix(input) {
       return input.replace("_source", "").replace("_target", "");
     },
+
+    showSecondStep() {
+      console.group("showSecondStep");
+
+      this.openCloseSecondStepView = true;
+
+      console.log("this", this);
+      console.log("this.$", this.$);
+      console.groupEnd();
+    },
   },
 
   computed: /* OK */ {
@@ -1640,3 +1715,18 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.second-step {
+  position: absolute;
+  top: 20%;
+  right: 10%;
+  width: 80%;
+  height: auto;
+  min-height: 20%;
+  background: ivory;
+
+  /* align-items: center;
+  justify-content: center; */
+}
+</style>
