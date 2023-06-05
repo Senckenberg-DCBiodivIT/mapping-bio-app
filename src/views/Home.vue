@@ -239,9 +239,9 @@
         V {{ secondStepData.versionMapper }}
       </p>
       <div class="field">
-        <label class="label">Autor</label>
+        <label class="label">Author</label>
         <div class="control">
-          <input class="input" type="text" v-model="secondStepData.autor" />
+          <input class="input" type="text" v-model="secondStepData.author" />
         </div>
       </div>
       <div class="field">
@@ -479,7 +479,7 @@ export default {
 
       secondStepData: {
         versionMapper: process.env.VUE_APP_VERSION,
-        autor: "",
+        author: "",
         mappingSetTitle: "",
         comment: "",
         license: "",
@@ -640,10 +640,6 @@ export default {
       }
 
       // Create mapping set here
-      // secondStepData: {
-      //   autor: "",
-      // },
-
       mappingSet.push(
         rdf.quad(
           rdf.blankNode("MappingSet"),
@@ -656,7 +652,7 @@ export default {
         rdf.quad(
           rdf.blankNode("MappingSet"),
           rdf.namedNode("sssom:author_label"),
-          rdf.literal(this.secondStepData.autor)
+          rdf.literal(this.secondStepData.author)
         )
       );
 
@@ -1276,7 +1272,8 @@ export default {
         else if (
           this.mappingtableExtension === "rdf" ||
           this.mappingtableExtension === "xml" ||
-          this.mappingtableExtension === "ttl"
+          this.mappingtableExtension === "ttl" ||
+          this.mappingtableExtension === "sssom"
         ) {
           console.log("RDF or TTL selected");
 
@@ -1294,10 +1291,11 @@ export default {
 
           var bindingsStream = await this.rdfObj.engines[
             "mapping"
-          ].queryBindings(this.query.mappingRow);
+          ].queryBindings(this.query.testQuery);
+          // ].queryBindings(this.query.mappingRow);
 
           bindingsStream.on("data", (bindings) => {
-            // console.log("bindings", bindings);
+            console.log("bindings", bindings);
             // console.log(
             //   "bindings.entries.hashmap.node",
             //   bindings.entries.hashmap.node
@@ -1347,7 +1345,8 @@ export default {
         reader.readAsText(file);
       }
       // TTL
-      else if (fileExtension == "ttl") {
+      else if (fileExtension == "ttl" || fileExtension == "sssom") {
+        // TODO: take care about sssom
         mimeType = "text/turtle";
         reader.readAsText(file);
       }

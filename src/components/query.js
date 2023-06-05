@@ -5,10 +5,9 @@ export const query = {
         prefix owl: <http://www.w3.org/2002/07/owl#>
 		    prefix skos:<http://www.w3.org/2004/02/skos/core#>
 
-    SELECT ?subject ?label
+    SELECT ?subject ?predicate ?object
     WHERE {
-      ?subject a skos:Concept .
-      ?subject skos:prefLabel ?label .
+      ?subject ?predicate ?object
     }
     `,
 
