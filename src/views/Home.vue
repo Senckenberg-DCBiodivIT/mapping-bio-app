@@ -6,7 +6,7 @@
   <br />
 
   <!-- mappping table, CSV, RDF projection -->
-  <section>
+  <section class="box">
     <o-collapse
       :open="true"
       aria-id="mappingTableUI_ID"
@@ -77,7 +77,7 @@
           <o-dropdown
             aria-role="list"
             v-model="dropdownExportFormatItem"
-            @update:modelValue="exportMapping"
+            @update:modelValue="showSecondStep"
           >
             <template #trigger="{ active }">
               <o-button variant="primary">
@@ -105,8 +105,6 @@
 
         <div class="column is-1" />
       </div>
-
-      <hr />
     </o-collapse>
   </section>
 
@@ -116,122 +114,176 @@
   <!-- <br />
   <hr /> -->
   <!-- Debug END -->
+  <div class="block">
+    <!-- TODO: Component mapping table control? -->
+    <div class="has-text-centered" @resize="selectValue">
+      <o-field label="Select mapping relation:" variant="">
+        <o-dropdown aria-role="list" v-model="dropdownSelectedItem">
+          <template #trigger="{ active }">
+            <o-button variant="primary">
+              <span>{{ dropdownItems[dropdownSelectedItem] }}</span>
 
-  <!-- TODO: Component mapping table control? -->
-  <div class="has-text-centered" @resize="selectValue">
-    <o-field label="Select mapping relation:" variant="">
-      <o-dropdown aria-role="list" v-model="dropdownSelectedItem">
-        <template #trigger="{ active }">
-          <o-button variant="primary">
-            <span>{{ dropdownItems[dropdownSelectedItem] }}</span>
+              <o-icon
+                pack="fa"
+                :icon="active ? 'chevron-down' : 'chevron-up'"
+              ></o-icon>
+            </o-button>
+          </template>
 
-            <o-icon
-              pack="fa"
-              :icon="active ? 'chevron-down' : 'chevron-up'"
-            ></o-icon>
-          </o-button>
-        </template>
+          <o-dropdown-item
+            v-for="(item, key) in dropdownItems"
+            :key="key"
+            :value="key"
+            aria-role="listitem"
+          >
+            {{ dropdownItems[key] }}</o-dropdown-item
+          >
+        </o-dropdown>
+      </o-field>
 
-        <o-dropdown-item
-          v-for="(item, key) in dropdownItems"
-          :key="key"
-          :value="key"
-          aria-role="listitem"
+      <o-button :label="'Add mapping'" :variant="'info'" @click="addMapping" />
+    </div>
+
+    <!-- Tree view -->
+    <div class="columns" @click="selectValue">
+      <!-- Component source tree view -->
+      <div class="column is-4">
+        <!-- Button -->
+        <div
+          class="file is-primary is-centered"
+          :class="{ 'has-name': hasSourceFileName }"
         >
-          {{ dropdownItems[key] }}</o-dropdown-item
-        >
-      </o-dropdown>
-    </o-field>
+          <label class="file-label">
+            <input
+              class="file-input"
+              type="file"
+              multiple
+              accept="owl"
+              name="resume"
+              @change="(e) => loadOntology(e, 'source')"
+            />
+            <span class="file-cta">
+              <span class="file-icon">
+                <i class="fas fa-upload"></i>
+              </span>
+              <span class="file-label">Choose a RDF/XML or TTL file…</span>
+            </span>
+            <span class="file-name" v-if="hasSourceFileName"
+              >{{ sourceFilename }}
+            </span>
+          </label>
+        </div>
 
-    <o-button :label="'Add mapping'" :variant="'info'" @click="addMapping" />
+        <!-- Tree -->
+        <treeselect
+          :key="tree.reloadKey.source"
+          v-model="tree.value.source"
+          :flat="true"
+          :multiple="true"
+          :options="tree.options.source"
+          :alwaysOpen="true"
+          :open-direction="'bottom'"
+          :load-options="loadOntologyChild"
+        />
+        <!-- :default-expand-level="1" -->
+      </div>
+      <div class="column" />
+
+      <!-- Component target tree view -->
+      <div class="column is-4">
+        <!-- Button -->
+        <div
+          class="file is-primary is-centered"
+          :class="{ 'has-name': hasTargetFileName }"
+        >
+          <label class="file-label">
+            <input
+              class="file-input"
+              type="file"
+              multiple
+              accept="owl"
+              name="resume"
+              @change="(e) => loadOntology(e, 'target')"
+            />
+            <span class="file-cta">
+              <span class="file-icon">
+                <i class="fas fa-upload"></i>
+              </span>
+              <span class="file-label">Choose a RDF/XML or TTL file…</span>
+            </span>
+            <span class="file-name" v-if="hasTargetFileName"
+              >{{ targetFilename }}
+            </span>
+          </label>
+        </div>
+
+        <!-- Tree -->
+        <treeselect
+          :key="tree.reloadKey.target"
+          v-model="tree.value.target"
+          :flat="true"
+          :multiple="true"
+          :options="tree.options.target"
+          :alwaysOpen="true"
+          :open-direction="'bottom'"
+          :load-options="loadOntologyChild"
+        />
+        <!-- :default-expand-level="2" -->
+      </div>
+    </div>
   </div>
 
-  <!-- Tree view -->
-  <div class="columns" @click="selectValue">
-    <!-- Component source tree view -->
-    <div class="column is-4">
-      <!-- Button -->
-      <div
-        class="file is-primary is-centered"
-        :class="{ 'has-name': hasSourceFileName }"
-      >
-        <label class="file-label">
+  <div class="second-step" v-if="openCloseSecondStepView">
+    <form class="box">
+      <p class="title is-6 has-text-right">
+        V {{ secondStepData.versionMapper }}
+      </p>
+      <div class="field">
+        <label class="label">Author</label>
+        <div class="control">
+          <input class="input" type="text" v-model="secondStepData.author" />
+        </div>
+      </div>
+      <div class="field">
+        <label class="label">Mapping set title</label>
+        <div class="control">
           <input
-            class="file-input"
-            type="file"
-            multiple
-            accept="owl"
-            name="resume"
-            @change="(e) => loadOntology(e, 'source')"
+            class="input"
+            type="text"
+            v-model="secondStepData.mappingSetTitle"
           />
-          <span class="file-cta">
-            <span class="file-icon">
-              <i class="fas fa-upload"></i>
-            </span>
-            <span class="file-label">Choose a RDF/XML or TTL file…</span>
-          </span>
-          <span class="file-name" v-if="hasSourceFileName"
-            >{{ sourceFilename }}
-          </span>
-        </label>
+        </div>
       </div>
 
-      <!-- Tree -->
-      <treeselect
-        :key="tree.reloadKey.source"
-        v-model="tree.value.source"
-        :flat="true"
-        :multiple="true"
-        :options="tree.options.source"
-        :alwaysOpen="true"
-        :open-direction="'bottom'"
-        :load-options="loadOntologyChild"
-      />
-      <!-- :default-expand-level="1" -->
-    </div>
-    <div class="column" />
-
-    <!-- Component target tree view -->
-    <div class="column is-4">
-      <!-- Button -->
-      <div
-        class="file is-primary is-centered"
-        :class="{ 'has-name': hasTargetFileName }"
-      >
-        <label class="file-label">
-          <input
-            class="file-input"
-            type="file"
-            multiple
-            accept="owl"
-            name="resume"
-            @change="(e) => loadOntology(e, 'target')"
+      <div class="field">
+        <label class="label">Comment</label>
+        <div class="control">
+          <textarea
+            class="textarea"
+            rows="2"
+            v-model="secondStepData.comment"
           />
-          <span class="file-cta">
-            <span class="file-icon">
-              <i class="fas fa-upload"></i>
-            </span>
-            <span class="file-label">Choose a RDF/XML or TTL file…</span>
-          </span>
-          <span class="file-name" v-if="hasTargetFileName"
-            >{{ targetFilename }}
-          </span>
-        </label>
+        </div>
       </div>
 
-      <!-- Tree -->
-      <treeselect
-        :key="tree.reloadKey.target"
-        v-model="tree.value.target"
-        :flat="true"
-        :multiple="true"
-        :options="tree.options.target"
-        :alwaysOpen="true"
-        :open-direction="'bottom'"
-        :load-options="loadOntologyChild"
-      />
-      <!-- :default-expand-level="2" -->
-    </div>
+      <div class="field">
+        <label class="label">License</label>
+        <div class="control">
+          <input class="input" type="text" v-model="secondStepData.license" />
+        </div>
+      </div>
+
+      <div class="columns">
+        <div class="column has-text-centered">
+          <o-button variant="warning" @click="openCloseSecondStepView = false"
+            >Cancel</o-button
+          >
+        </div>
+        <div class="column has-text-centered">
+          <o-button variant="primary" @click="exportMapping">Download</o-button>
+        </div>
+      </div>
+    </form>
   </div>
 </template>
 
@@ -282,6 +334,7 @@ export default {
       intervalPerformance: false,
 
       openCloseTableView: true, // false: closed, true: open
+      openCloseSecondStepView: false, // false: closed, true: open
 
       mappingDataTableConfig: [
         {
@@ -345,6 +398,18 @@ export default {
         },
 
         {
+          name: "confidence",
+          display: "confidence (sssom)",
+          type: "text",
+        },
+
+        {
+          name: "review",
+          display: "Review (sssom)",
+          type: "checkbox",
+          cellClass: "has-text-centered",
+        },
+        {
           name: "comment",
           display: "Comment",
           type: "text",
@@ -407,10 +472,18 @@ export default {
         "RDF/XML",
         "RDF/TTL",
         "RDF/JSON-LD (tbc)",
-        "SSSOM (tbc)",
+        "SSSOM (TTL)",
       ],
       dropdownExtension: ["", "csv", "rdf", "ttl", "json", "sssom"],
       dropdownExportFormatItem: 0,
+
+      secondStepData: {
+        versionMapper: process.env.VUE_APP_VERSION,
+        author: "",
+        mappingSetTitle: "",
+        comment: "",
+        license: "",
+      },
     };
   },
 
@@ -432,9 +505,316 @@ export default {
       if (this.dropdownExportFormatItem > 0) {
         if (this.dropdownExportFormatItem == 1) {
           this.exportCSV();
+        } else if (this.dropdownExportFormatItem == 5) {
+          this.exportSSSOM();
         } else
           this.exportRDF(this.dropdownExtension[this.dropdownExportFormatItem]);
       }
+      console.groupEnd();
+    },
+
+    async exportSSSOM() {
+      // Export SSSOM here as a json-ld for Cordra and other purposes
+      console.group("exportSSSOM");
+
+      var input = [];
+      var mappingSet = [];
+      var singleMappings = [];
+      var singleMappingsIDs = [];
+
+      // Clean data
+      for (var idxSource in this.mappingtable) {
+        var clean_idxSource = this.cleanSuffix(idxSource);
+        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
+          var clean_idxTarget = this.cleanSuffix(idxTarget);
+
+          // Create mapping node
+          input.push(
+            rdf.quad(
+              rdf.namedNode(clean_idxSource),
+              rdf.namedNode(
+                this.mappingtable[idxSource][idxTarget]["relation"]
+              ),
+              rdf.namedNode(clean_idxTarget)
+            )
+          );
+
+          // Discribe mapping
+          let singleMappingsID = `${clean_idxSource}_${clean_idxTarget}`;
+          singleMappingsIDs.push(singleMappingsID);
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("rdf:type"),
+              rdf.namedNode("owl:Axiom")
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:comment"),
+              rdf.literal(this.mappingtable[idxSource][idxTarget]["comment"])
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:confidence"),
+              rdf.literal("empty here") // TODO: link data here
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(`${clean_idxSource}_${clean_idxTarget}`),
+              rdf.namedNode("sssom:last_updated"),
+              rdf.literal(new Date().toUTCString())
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:mapping_cardinality"),
+              rdf.literal("empty here") // TODO: check and put here (1:1 or 1:n. Any other comopsition is not available)
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:mapping_date"),
+              rdf.literal("empty here") // TODO: Use the creation date here
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:mappings"),
+              rdf.literal(`[${clean_idxSource}, ${clean_idxTarget}`)
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:object_id"),
+              rdf.literal(clean_idxTarget)
+            )
+          );
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:object_label"),
+              rdf.literal("Put label here") // TODO: Put label here
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:predicate_id"),
+              rdf.literal(this.mappingtable[idxSource][idxTarget]["relation"])
+            )
+          );
+
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:subject_id"),
+              rdf.literal(clean_idxSource)
+            )
+          );
+          singleMappings.push(
+            rdf.quad(
+              rdf.blankNode(singleMappingsID),
+              rdf.namedNode("sssom:subject_label"),
+              rdf.literal("Put label here") // TODO: Put label here
+            )
+          );
+        }
+      }
+
+      // Create mapping set here
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("rdf:type"),
+          rdf.literal("sssom:MappingSet")
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:author_label"),
+          rdf.literal(this.secondStepData.author)
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_tool"),
+          rdf.literal("mapping.bio")
+        )
+      );
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_tool_version"),
+          rdf.literal(this.secondStepData.versionMapper)
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_provider"),
+          rdf.literal("https://mapping.bio")
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:comment"),
+          rdf.literal(this.secondStepData.comment)
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:imports"),
+          rdf.literal("")
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:last_updated"),
+          rdf.literal(new Date().toUTCString())
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:license"),
+          rdf.literal(this.secondStepData.license)
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_date"),
+          rdf.literal(new Date().toUTCString()) // TODO: Use the creation date here, if there is an available
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_registry_description"),
+          rdf.literal("")
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_registry_id"),
+          rdf.literal("")
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_registry_title"),
+          rdf.literal("")
+        )
+      );
+
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_set_id"),
+          rdf.literal("") // TODO: a bigger part to do. Use the old one if available
+        )
+      );
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_set_source"),
+          rdf.literal("") // TODO: open discussion
+        )
+      );
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_set_title"),
+          rdf.literal(this.secondStepData.mappingSetTitle)
+        )
+      );
+      mappingSet.push(
+        rdf.quad(
+          rdf.blankNode("MappingSet"),
+          rdf.namedNode("sssom:mapping_set_version"),
+          rdf.literal("") // TODO: Format?
+        )
+      );
+
+      // include single mappings
+      for (var item of singleMappingsIDs) {
+        mappingSet.push(
+          rdf.quad(
+            rdf.blankNode("MappingSet"),
+            rdf.namedNode("sssom:mappings"),
+            rdf.blankNode(item)
+          )
+        );
+      }
+
+      const { schema, dcterms, foaf, rdfs, skos, owl } = prefixes;
+      const sssom = "https://w3id.org/sssom/";
+
+      var runExportFlag = true;
+
+      var sink = await turtle({
+        // var sink = await rdfXml({
+        // var sink = await jsonld({
+        prefixes: {
+          schema,
+          dcterms,
+          foaf,
+          rdfs,
+          skos,
+          owl,
+          sssom,
+        },
+      });
+      // console.log("sink", sink);
+
+      if (runExportFlag) {
+        var exportArray = input.concat(mappingSet).concat(singleMappings);
+        console.log("exportArray", exportArray);
+
+        console.log("Try to create a stream with sink");
+        const stream = await sink.import(Readable.from(exportArray));
+
+        let content = await getStream(stream);
+        console.log("Content created", content);
+        this.downloadMappingExport(content, "sssom"); // TODO: set json later
+      }
+
       console.groupEnd();
     },
 
@@ -473,21 +853,27 @@ export default {
       var labelReady = []; // To prevent doubling
 
       for (var idxSource in this.mappingtable) {
+        // Clean data
+        var clean_idxSource = this.cleanSuffix(idxSource);
+
         for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
           // Label source
-          // Check namedNodes
+
+          // Clean data
+          var clean_idxTarget = this.cleanSuffix(idxTarget);
+
           if (!labelReady.includes(idxSource)) {
             input.push(
               rdf.quad(
                 rdf.namedNode("owl:class"),
                 rdf.namedNode("id"),
-                rdf.literal(`${idxSource}`)
+                rdf.literal(`${clean_idxSource}`)
               )
             );
             //   // Create new label
             input.push(
               rdf.quad(
-                rdf.namedNode(`${idxSource}`),
+                rdf.namedNode(`${clean_idxSource}`),
                 rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
                 rdf.literal(
                   this.mappingtable[idxSource][idxTarget]["sourceTitle"]
@@ -503,13 +889,13 @@ export default {
               rdf.quad(
                 rdf.namedNode("owl:class"),
                 rdf.namedNode("id"),
-                rdf.literal(`${idxSource}`)
+                rdf.literal(`${clean_idxTarget}`)
               )
             );
             // Create new label
             input.push(
               rdf.quad(
-                rdf.namedNode(`${idxTarget}`),
+                rdf.namedNode(`${clean_idxTarget}`),
                 rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
                 rdf.literal(
                   this.mappingtable[idxSource][idxTarget]["targetTitle"]
@@ -518,53 +904,31 @@ export default {
             );
             labelReady.push(idxTarget);
           }
-          input.push(
-            rdf.quad(
-              rdf.namedNode(`${idxSource}`),
-              rdf.namedNode(`${idxTarget}`),
-              rdf.literal(
-                // TODO: check prefix
-                "rel:" + this.mappingtable[idxSource][idxTarget]["relation"]
-              )
-            )
-          );
 
-          input.push(
-            rdf.quad(
-              rdf.namedNode(`${idxSource}`),
-
-              rdf.namedNode(`${idxTarget}`),
-              rdf.literal(
-                // TODO: check that
-                "mes:" + '"1.0"^^<http://www.w3.org/2001/XMLSchema#float>'
-              )
-            )
-          );
-
-          //////
+          // TODO
           // input.push(
           //   rdf.quad(
-          //     rdf.namedNode("http://example.org/sheldon-cooper"),
-          //     rdf.namedNode("http://schema.org/givenName"),
-          //     rdf.literal("Sheldon")
-          //   )
-          // );
-          // input.push(
-          //   rdf.quad(
-          //     rdf.namedNode("http://example.org/sheldon-cooper"),
-          //     rdf.namedNode("http://schema.org/familyName"),
-          //     rdf.literal("Cooper")
-          //   )
-          // );
-          // input.push(
-          //   rdf.quad(
-          //     rdf.namedNode("http://example.org/sheldon-cooper"),
-          //     rdf.namedNode("http://schema.org/knows"),
-          //     rdf.namedNode("http://example.org/amy-farrah-fowler")
+          //     rdf.namedNode(`${idxSource}`),
+          //     rdf.namedNode(
+          //       // TODO: check prefix
+          //       this.mappingtable[idxSource][idxTarget]["relation"]
+          //       // "TEST_123"
+          //     ),
+          //     rdf.namedNode(`${idxTarget}`)
           //   )
           // );
 
-          //////
+          // input.push(
+          //   rdf.quad(
+          //     rdf.namedNode(`${idxSource}`),
+
+          //     rdf.namedNode(`${idxTarget}`),
+          //     rdf.literal(
+          //       // TODO: check that
+          //       "mes:" + '"1.0"^^<http://www.w3.org/2001/XMLSchema#float>'
+          //     )
+          //   )
+          // );
         }
       }
       console.log(input);
@@ -908,7 +1272,8 @@ export default {
         else if (
           this.mappingtableExtension === "rdf" ||
           this.mappingtableExtension === "xml" ||
-          this.mappingtableExtension === "ttl"
+          this.mappingtableExtension === "ttl" ||
+          this.mappingtableExtension === "sssom"
         ) {
           console.log("RDF or TTL selected");
 
@@ -926,10 +1291,11 @@ export default {
 
           var bindingsStream = await this.rdfObj.engines[
             "mapping"
-          ].queryBindings(this.query.mappingRow);
+          ].queryBindings(this.query.testQuery);
+          // ].queryBindings(this.query.mappingRow);
 
           bindingsStream.on("data", (bindings) => {
-            // console.log("bindings", bindings);
+            console.log("bindings", bindings);
             // console.log(
             //   "bindings.entries.hashmap.node",
             //   bindings.entries.hashmap.node
@@ -979,7 +1345,8 @@ export default {
         reader.readAsText(file);
       }
       // TTL
-      else if (fileExtension == "ttl") {
+      else if (fileExtension == "ttl" || fileExtension == "sssom") {
+        // TODO: take care about sssom
         mimeType = "text/turtle";
         reader.readAsText(file);
       }
@@ -1238,6 +1605,21 @@ export default {
         }
       }, 100);
     },
+
+    // Helper
+    cleanSuffix(input) {
+      return input.replace("_source", "").replace("_target", "");
+    },
+
+    showSecondStep() {
+      console.group("showSecondStep");
+
+      this.openCloseSecondStepView = true;
+
+      console.log("this", this);
+      console.log("this.$", this.$);
+      console.groupEnd();
+    },
   },
 
   computed: /* OK */ {
@@ -1332,3 +1714,18 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.second-step {
+  position: absolute;
+  top: 20%;
+  right: 10%;
+  width: 80%;
+  height: auto;
+  min-height: 20%;
+  background: ivory;
+
+  /* align-items: center;
+  justify-content: center; */
+}
+</style>

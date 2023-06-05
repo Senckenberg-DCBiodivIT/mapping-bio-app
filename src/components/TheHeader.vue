@@ -7,8 +7,7 @@
 
       <div class="column">
         <div class="has-text-centered ownFont bigText">
-          mapping.bio <br />Mapping Service<br />
-          Prototype V0.11.4
+          mapping.bio <br />Mapping Service V. {{ version }}
         </div>
       </div>
 
@@ -31,6 +30,7 @@ export default {
     return {
       sgnLogo: require("../assets/sgnLogoH.png"),
       biodtLogo: require("../assets/biodtLogo.png"),
+      version: process.env.VUE_APP_VERSION,
     };
   },
 };
