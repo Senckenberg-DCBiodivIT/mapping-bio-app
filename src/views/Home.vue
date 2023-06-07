@@ -1,9 +1,5 @@
 <template>
   <!-- TODO: mappingTable as an own component with an store segment? -->
-  <div class="has-text-centered" style="margin-top: 1em; font-size: 2em">
-    Mapping Editor
-  </div>
-  <br />
 
   <!-- mappping table, CSV, RDF projection -->
   <section class="box">
@@ -14,14 +10,20 @@
       @close="openCloseTableView = false"
     >
       <template #trigger>
-        <p class="has-text-centered">
-          <o-button
-            variant="primary"
-            aria-controls="mappingTableUI_ID"
-            v-text="openCloseTableView ? 'Close table view' : 'Open table view'"
+        <div class="has-text-centered">
+          <div
+            class="has-text-centered"
+            style="margin-top: 1em; font-size: 2em"
           >
-          </o-button>
-        </p>
+            Mapping Editor&nbsp;<o-button
+              variant="primary"
+              aria-controls="mappingTableUI_ID"
+              iconPack="fa"
+              :iconLeft="openCloseTableView ? 'arrow-up' : 'arrow-down'"
+            >
+            </o-button>
+          </div>
+        </div>
         <br />
       </template>
       <div class="notification">
@@ -1637,6 +1639,7 @@ export default {
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   async mounted() /* OK */ {
+    console.log("mount");
     window.mappingDataTable = new AppendGrid({
       element: document.getElementById("mapppingtableCSV"),
       initRows: 0,
@@ -1655,62 +1658,71 @@ export default {
         table: "is-narrow is-fullwidth",
       },
     });
-    this.refreshMappingtableUI();
+    // this.refreshMappingtableUI();
 
-    // this.tree = {
-    //   value: { source: [1, 2, 3, 4, 5, 6], target: [] },
-    //   options: {
-    //     source: [
-    //       { label: "leaf alternate placement", id: 1 },
-    //       { label: "perianth color", id: 6 },
+    console.log("def tree");
 
-    //       { label: "fruit pilosity", id: 5 },
-    //       { label: "whole plant lifestyle", id: 2 },
+    this.tree = {
+      value: { source: [], target: [] },
+      options: {
+        source: [
+          { label: "leaf alternate placement", id: 1 },
+          { label: "perianth color", id: 6 },
 
-    //       { label: "leaf morphology", id: 3 },
+          { label: "fruit pilosity", id: 5 },
+          { label: "whole plant lifestyle", id: 2 },
 
-    //       { label: "stamen morphology", id: 4 },
-    //     ],
+          { label: "leaf morphology", id: 3 },
 
-    //     target: [
-    //       { label: "life cycle habit", id: 8 },
-    //       { label: "fruit hairiness", id: 11 },
-    //       { label: "phyllotaxy", id: 7 },
-    //       { label: "microsporophyll morphlogy trait", id: 10 },
-    //       { label: "tepal color", id: 12 },
-    //       { label: "leaf morphology trait", id: 9 },
-    //     ],
-    //   },
-    // };
+          { label: "stamen morphology", id: 4 },
+        ],
 
-    // function callback() {
-    //   var allDivs = document.getElementsByTagName("*");
-    //   for (var left of [1, 2, 3, 4, 5, 6]) {
-    //     var from = null,
-    //       to = null;
-    //     var temp = left + 6;
-    //     for (var singleDiv of allDivs) {
-    //       console.log("left", left);
-    //       if (singleDiv.getAttribute("data-id") == left) {
-    //         from = singleDiv;
-    //       } else if (singleDiv.getAttribute("data-id") == `${temp}`) {
-    //         to = singleDiv;
-    //       }
+        target: [
+          { label: "life cycle habit", id: 8 },
+          { label: "fruit hairiness", id: 11 },
+          { label: "phyllotaxy", id: 7 },
+          { label: "microsporophyll morphlogy trait", id: 10 },
+          { label: "tepal color", id: 12 },
+          { label: "leaf morphology trait", id: 9 },
+        ],
+      },
+      reloadKey: { source: 0, target: 0 }, // reload index for VUE reloads
+      skos_flag: { source: false, target: false }, // we need to modify queries if it's a skos notation
+    };
 
-    //       if (from != null && to != null) {
-    //         new LeaderLine(from, to);
-    //         from = null;
-    //         to = null;
-    //         break;
-    //       }
-    //     }
-    //   }
-    // }
+    function callback() {
+      console.log("TEST");
+      var allDivs = document.getElementsByTagName("*");
+      var source = [1, 2, 3, 4, 5, 6];
+      var target = [7, 8, 9, 10, 11, 12];
 
-    // setTimeout(function () {
-    //   console.log("Callback Funktion wird aufgerufen");
-    //   callback(this.tree);
-    // }, 2000);
+      for (var left in source) {
+        var from = null,
+          to = null;
+
+        for (var singleDiv of allDivs) {
+          console.log("left", source[left]);
+
+          if (singleDiv.getAttribute("data-id") == source[left]) {
+            from = singleDiv;
+          } else if (singleDiv.getAttribute("data-id") == target[left]) {
+            to = singleDiv;
+          }
+
+          if (from != null && to != null) {
+            new LeaderLine(from, to);
+            from = null;
+            to = null;
+            break;
+          }
+        }
+      }
+    }
+    console.log("setTimeout");
+    setTimeout(function () {
+      console.log("Callback Funktion wird aufgerufen");
+      callback(this.tree);
+    }, 2000);
   },
 };
 </script>

@@ -1,5 +1,6 @@
 <template>
   <div class="is-active">
+    {{ headerStyle }}
     <div class="columns">
       <div class="column is-3">
         <router-link to="imprint" class="ownFont">Imprint</router-link>
@@ -7,7 +8,7 @@
 
       <div class="column">
         <div class="has-text-centered ownFont bigText">
-          mapping.bio <br />Mapping Service V. {{ version }}
+          mapping.bio Mapping Service V. {{ version }}
         </div>
       </div>
 
@@ -28,13 +29,25 @@ export default {
   name: "TheHeader",
   data() {
     return {
-      sgnLogo: require("../assets/sgnLogoH.png"),
-      biodtLogo: require("../assets/biodtLogo.png"),
+      sgnLogo: require("@/assets/sgnLogoH.png"),
+      biodtLogo: require("@/assets/biodtLogo.png"),
+
       version: process.env.VUE_APP_VERSION,
     };
   },
 };
 </script>
+
+<style scoped lang="scss">
+.is-active {
+  background-image: url("@/assets/header_bg.png");
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+
+  background-color: #349a34;
+}
+</style>
 
 <style scoped>
 .sgnLogo {
@@ -48,9 +61,6 @@ export default {
   margin-top: 3px;
   margin-right: 3px;
 }
-.is-active {
-  background-color: #679c60;
-}
 
 .ownFont {
   color: white !important;
@@ -58,5 +68,15 @@ export default {
 
 .bigText {
   font-size: 2em;
+}
+
+.footer {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background-color: red;
+  color: white;
+  text-align: center;
 }
 </style>
