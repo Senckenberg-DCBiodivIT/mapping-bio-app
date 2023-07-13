@@ -1455,7 +1455,7 @@ export default {
             - or delete a relation between two ontologies
       */
 
-      // console.group("refreshMappingtableUI");
+      console.group("refreshMappingtableUI");
       var currentState = [];
       console.log("this.mappingtable", this.mappingtable);
 
@@ -1486,9 +1486,15 @@ export default {
       //   });
       // }
       console.log("currentState", currentState);
-      window.mappingDataTable.load(currentState);
 
-      // console.groupEnd();
+      if (currentState.length == 0) {
+        window.mappingDataTable.load([[]]);
+        window.mappingDataTable.removeRow(0);
+      } else {
+        window.mappingDataTable.load(currentState);
+      }
+
+      console.groupEnd();
     },
 
     // Tree interactions
@@ -1658,71 +1664,71 @@ export default {
         table: "is-narrow is-fullwidth",
       },
     });
-    // this.refreshMappingtableUI();
+    this.refreshMappingtableUI();
 
-    console.log("def tree");
+    // console.log("def tree");
 
-    this.tree = {
-      value: { source: [], target: [] },
-      options: {
-        source: [
-          { label: "leaf alternate placement", id: 1 },
-          { label: "perianth color", id: 6 },
+    // this.tree = {
+    //   value: { source: [], target: [] },
+    //   options: {
+    //     source: [
+    //       { label: "leaf alternate placement", id: 1 },
+    //       { label: "perianth color", id: 6 },
 
-          { label: "fruit pilosity", id: 5 },
-          { label: "whole plant lifestyle", id: 2 },
+    //       { label: "fruit pilosity", id: 5 },
+    //       { label: "whole plant lifestyle", id: 2 },
 
-          { label: "leaf morphology", id: 3 },
+    //       { label: "leaf morphology", id: 3 },
 
-          { label: "stamen morphology", id: 4 },
-        ],
+    //       { label: "stamen morphology", id: 4 },
+    //     ],
 
-        target: [
-          { label: "life cycle habit", id: 8 },
-          { label: "fruit hairiness", id: 11 },
-          { label: "phyllotaxy", id: 7 },
-          { label: "microsporophyll morphlogy trait", id: 10 },
-          { label: "tepal color", id: 12 },
-          { label: "leaf morphology trait", id: 9 },
-        ],
-      },
-      reloadKey: { source: 0, target: 0 }, // reload index for VUE reloads
-      skos_flag: { source: false, target: false }, // we need to modify queries if it's a skos notation
-    };
+    //     target: [
+    //       { label: "life cycle habit", id: 8 },
+    //       { label: "fruit hairiness", id: 11 },
+    //       { label: "phyllotaxy", id: 7 },
+    //       { label: "microsporophyll morphlogy trait", id: 10 },
+    //       { label: "tepal color", id: 12 },
+    //       { label: "leaf morphology trait", id: 9 },
+    //     ],
+    //   },
+    //   reloadKey: { source: 0, target: 0 }, // reload index for VUE reloads
+    //   skos_flag: { source: false, target: false }, // we need to modify queries if it's a skos notation
+    // };
 
-    function callback() {
-      console.log("TEST");
-      var allDivs = document.getElementsByTagName("*");
-      var source = [1, 2, 3, 4, 5, 6];
-      var target = [7, 8, 9, 10, 11, 12];
+    // function callback() {
+    //   console.log("TEST");
+    //   var allDivs = document.getElementsByTagName("*");
+    //   var source = [1, 2, 3, 4, 5, 6];
+    //   var target = [7, 8, 9, 10, 11, 12];
 
-      for (var left in source) {
-        var from = null,
-          to = null;
+    //   for (var left in source) {
+    //     var from = null,
+    //       to = null;
 
-        for (var singleDiv of allDivs) {
-          console.log("left", source[left]);
+    //     for (var singleDiv of allDivs) {
+    //       console.log("left", source[left]);
 
-          if (singleDiv.getAttribute("data-id") == source[left]) {
-            from = singleDiv;
-          } else if (singleDiv.getAttribute("data-id") == target[left]) {
-            to = singleDiv;
-          }
+    //       if (singleDiv.getAttribute("data-id") == source[left]) {
+    //         from = singleDiv;
+    //       } else if (singleDiv.getAttribute("data-id") == target[left]) {
+    //         to = singleDiv;
+    //       }
 
-          if (from != null && to != null) {
-            new LeaderLine(from, to);
-            from = null;
-            to = null;
-            break;
-          }
-        }
-      }
-    }
-    console.log("setTimeout");
-    setTimeout(function () {
-      console.log("Callback Funktion wird aufgerufen");
-      callback(this.tree);
-    }, 2000);
+    //       if (from != null && to != null) {
+    //         new LeaderLine(from, to);
+    //         from = null;
+    //         to = null;
+    //         break;
+    //       }
+    //     }
+    //   }
+    // }
+    // console.log("setTimeout");
+    // setTimeout(function () {
+    //   console.log("Callback Funktion wird aufgerufen");
+    //   callback(this.tree);
+    // }, 2000);
   },
 };
 </script>
