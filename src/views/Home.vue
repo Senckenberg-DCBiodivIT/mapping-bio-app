@@ -53,7 +53,7 @@
               />
               <span class="file-cta">
                 <span class="file-icon">
-                  <i class="fas fa-upload"></i>
+                  <i class="fa fa-upload"></i>
                 </span>
                 <span class="file-label">Choose a mapping file...</span>
               </span>
@@ -166,7 +166,7 @@
             />
             <span class="file-cta">
               <span class="file-icon">
-                <i class="fas fa-upload"></i>
+                <i class="fa fa-upload"></i>
               </span>
               <span class="file-label">Choose a RDF/XML or TTL file…</span>
             </span>
@@ -209,7 +209,7 @@
             />
             <span class="file-cta">
               <span class="file-icon">
-                <i class="fas fa-upload"></i>
+                <i class="fa fa-upload"></i>
               </span>
               <span class="file-label">Choose a RDF/XML or TTL file…</span>
             </span>
@@ -1047,6 +1047,11 @@ export default {
           // First level visualisation
           var bindingsStream = null;
 
+          // ONTO TEST
+          // console.log("Start ONTO TEST");
+          // this.ontologyTestFKT({ position: position, idxEngine: idxEngine });
+          // ONTO TEST END
+
           if (this.tree.skos_flag[position]) {
             bindingsStream = await that.rdfObj.engines[position][
               idxEngine
@@ -1057,7 +1062,7 @@ export default {
             ].queryBindings(that.query.firstLevelClass_OWL);
           }
           bindingsStream.on("data", (bindings) => {
-            console.log("bindings", bindings);
+            // console.log("bindings", bindings);
 
             const id =
               bindings.entries.hashmap.node.children[0].value.id.replaceAll(
@@ -1133,6 +1138,31 @@ export default {
 
       console.groupEnd();
     },
+
+    // async ontologyTestFKT(param) {
+    //   // Here you can test some queries and new functionalities.
+
+    //   var bindingsStream = null;
+    //   var tempClassJSON = {};
+
+    //   bindingsStream = await this.rdfObj.engines[param.position][
+    //     param.idxEngine
+    //   ].queryBindings(this.query.getAllClasses_OWL);
+
+    //   bindingsStream.on("data", (bindings) => {
+    //     console.log("debug bindings", bindings);
+    //     let classID = bindings.entries.hashmap.node.children[0].value.id;
+    //     if (!tempClassJSON[classID]) {
+    //       tempClassJSON[classID] = false;
+    //     }
+    //   });
+
+    //   bindingsStream.on("error", (error) => console.log(error));
+
+    //   bindingsStream.on("end", () => {
+    //     console.log("ready", tempClassJSON);
+    //   });
+    // },
 
     async loadOntologyChild(param) {
       console.group("loadOntologyChild", param);
