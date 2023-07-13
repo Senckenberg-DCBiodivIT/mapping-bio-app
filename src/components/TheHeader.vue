@@ -7,7 +7,7 @@
       </div>
 
       <div class="column">
-        <div class="has-text-centered ownFont bigText">
+        <div class="has-text-centered ownFont bigText testfooter">
           mapping.bio Mapping Service V. {{ version }}
         </div>
       </div>
@@ -67,16 +67,11 @@ export default {
 }
 
 .bigText {
-  font-size: 2em;
+  font-size: 1.75rem;
 }
 
-.footer {
-  position: fixed;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  background-color: red;
-  color: white;
-  text-align: center;
+.testfooter {
+  position: relative;
+  margin-top: 10%;
 }
 </style>
