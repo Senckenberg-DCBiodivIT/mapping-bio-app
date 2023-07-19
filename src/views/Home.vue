@@ -185,8 +185,8 @@
           :options="tree.options.source"
           :alwaysOpen="true"
           :open-direction="'bottom'"
-          :load-options="loadOntologyChild"
         />
+        <!-- :load-options="loadOntologyChild" -->
         <!-- :default-expand-level="1" -->
       </div>
       <div class="column" />
@@ -228,8 +228,8 @@
           :options="tree.options.target"
           :alwaysOpen="true"
           :open-direction="'bottom'"
-          :load-options="loadOntologyChild"
         />
+        <!-- :load-options="loadOntologyChild" -->
         <!-- :default-expand-level="2" -->
       </div>
     </div>
@@ -446,6 +446,7 @@ export default {
 
       rdfObj: {
         engines: { source: [], target: [], mapping: {} },
+        classes: { source: {}, target: {} }, // A helper object to indicate unused classes (owl:Class) for error recognition
       },
       query: query, // external stored queries for a better readability
 
@@ -1028,6 +1029,112 @@ export default {
 
         // Reader definition
         reader.onload = async (e, that = this) => {
+          // Inner functions
+          async function step1_getAllClasses() {
+            console.log("step1_getAllClasses.getAllClasses()");
+
+            let tempBindingsStream = null;
+
+            tempBindingsStream = await that.rdfObj.engines[position][
+              idxEngine
+            ].queryBindings(that.query.getAllClasses_OWL);
+
+            tempBindingsStream.on("data", (bindings) => {
+              // console.log("debug bindings", bindings);
+              let classID = bindings.entries.hashmap.node.children[0].value.id;
+              if (!that.rdfObj.classes[position][classID]) {
+                that.rdfObj.classes[position][classID] = false;
+              }
+            });
+
+            tempBindingsStream.on("error", (error) => console.log(error));
+
+            tempBindingsStream.on("end", () => {
+              console.log(
+                "step1_getAllClasses ready",
+                that.rdfObj.classes[position]
+              );
+              step2_firstLevelClasses();
+            });
+          }
+
+          async function step2_firstLevelClasses() {
+            //
+            let tempBindingsStream = null;
+
+            if (that.tree.skos_flag[position]) {
+              tempBindingsStream = await that.rdfObj.engines[position][
+                idxEngine
+              ].queryBindings(that.query.firstLevelClass_SKOS);
+            } else {
+              tempBindingsStream = await that.rdfObj.engines[position][
+                idxEngine
+              ].queryBindings(that.query.firstLevelClass_OWL);
+            }
+            tempBindingsStream.on("data", (bindings) => {
+              // console.log("bindings", bindings);
+
+              // detected class
+              that.rdfObj.classes[position][
+                bindings.entries.hashmap.node.children[0].value.id
+              ] = true;
+
+              const id =
+                bindings.entries.hashmap.node.children[0].value.id.replaceAll(
+                  '"',
+                  ""
+                ) + `_${position}`;
+
+              var oldEneteryFlag = false;
+              // You can use only "@en" labels. On this way "en-US" is valid too
+
+              let labelValid =
+                (that.tree.skos_flag[position] &&
+                  bindings.entries.hashmap.node.children[1].value.id.includes(
+                    "@en"
+                  )) ||
+                !that.tree.skos_flag[position];
+
+              if (labelValid) {
+                for (var treeItem of tree_options) {
+                  if (treeItem.id == id) {
+                    oldEneteryFlag = true;
+                  }
+                }
+
+                if (!oldEneteryFlag) {
+                  tree_options.push({
+                    id: id,
+                    label:
+                      bindings.entries.hashmap.node.children[1].value.id.replaceAll(
+                        '"',
+                        ""
+                      ),
+                    children: null,
+                    position: position, // for the sparql engine (source or engine, left or right) //TODO: do we still need it?
+                  });
+                }
+              }
+            });
+
+            tempBindingsStream.on("error", (error) => console.log(error));
+
+            tempBindingsStream.on("end", () => {
+              console.log("tree_options", tree_options);
+              console.log("detected: ", that.rdfObj.classes[position]);
+
+              that.tree.options[position] = tree_options;
+
+              var treesToHandle = document.getElementsByClassName(
+                "vue-treeselect__menu"
+              );
+              for (var item of treesToHandle) {
+                item.style.removeProperty("max-height");
+              }
+              console.log("step2_firstLevelClasses ready");
+            });
+          }
+
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           const ontologyStream = require("streamify-string")(e.target.result);
 
@@ -1044,78 +1151,17 @@ export default {
           this.tree.skos_flag[position] =
             e.target.result.includes("xmlns:skos");
 
-          // First level visualisation
-          var bindingsStream = null;
+          // Step 1 - detect all classes
+          // At first for OWL
+          step1_getAllClasses();
 
-          // ONTO TEST
-          // console.log("Start ONTO TEST");
-          // this.ontologyTestFKT({ position: position, idxEngine: idxEngine });
-          // ONTO TEST END
+          // Step 2 - detect all first level classes ( not a subclass from another one)
+          // Chained from step 1
 
-          if (this.tree.skos_flag[position]) {
-            bindingsStream = await that.rdfObj.engines[position][
-              idxEngine
-            ].queryBindings(that.query.firstLevelClass_SKOS);
-          } else {
-            bindingsStream = await that.rdfObj.engines[position][
-              idxEngine
-            ].queryBindings(that.query.firstLevelClass_OWL);
-          }
-          bindingsStream.on("data", (bindings) => {
-            // console.log("bindings", bindings);
+          // Step 3 - detect all children-nodes
+          // Chained from step 2
 
-            const id =
-              bindings.entries.hashmap.node.children[0].value.id.replaceAll(
-                '"',
-                ""
-              ) + `_${position}`;
-
-            var oldEneteryFlag = false;
-            // You can use only "@en" labels. On this way "en-US" is valid too
-
-            let labelValid =
-              (this.tree.skos_flag[position] &&
-                bindings.entries.hashmap.node.children[1].value.id.includes(
-                  "@en"
-                )) ||
-              !this.tree.skos_flag[position];
-
-            if (labelValid) {
-              for (var treeItem of tree_options) {
-                if (treeItem.id == id) {
-                  oldEneteryFlag = true;
-                }
-              }
-
-              if (!oldEneteryFlag) {
-                tree_options.push({
-                  id: id,
-                  label:
-                    bindings.entries.hashmap.node.children[1].value.id.replaceAll(
-                      '"',
-                      ""
-                    ),
-                  children: null,
-                  position: position, // for the sparql engine (source or engine, left or right)
-                });
-              }
-            }
-          });
-
-          bindingsStream.on("error", (error) => console.log(error));
-
-          bindingsStream.on("end", () => {
-            console.log("tree_options", tree_options);
-            that.tree.options[position] = tree_options;
-
-            var treesToHandle = document.getElementsByClassName(
-              "vue-treeselect__menu"
-            );
-            for (var item of treesToHandle) {
-              item.style.removeProperty("max-height");
-            }
-            console.log("ready");
-          });
+          // Step 4 - detect all unmasked classes and build a new first leven structure
         };
 
         // Read file
@@ -1138,31 +1184,6 @@ export default {
 
       console.groupEnd();
     },
-
-    // async ontologyTestFKT(param) {
-    //   // Here you can test some queries and new functionalities.
-
-    //   var bindingsStream = null;
-    //   var tempClassJSON = {};
-
-    //   bindingsStream = await this.rdfObj.engines[param.position][
-    //     param.idxEngine
-    //   ].queryBindings(this.query.getAllClasses_OWL);
-
-    //   bindingsStream.on("data", (bindings) => {
-    //     console.log("debug bindings", bindings);
-    //     let classID = bindings.entries.hashmap.node.children[0].value.id;
-    //     if (!tempClassJSON[classID]) {
-    //       tempClassJSON[classID] = false;
-    //     }
-    //   });
-
-    //   bindingsStream.on("error", (error) => console.log(error));
-
-    //   bindingsStream.on("end", () => {
-    //     console.log("ready", tempClassJSON);
-    //   });
-    // },
 
     async loadOntologyChild(param) {
       console.group("loadOntologyChild", param);
