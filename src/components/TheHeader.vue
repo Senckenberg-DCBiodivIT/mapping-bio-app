@@ -3,7 +3,16 @@
     {{ headerStyle }}
     <div class="columns">
       <div class="column is-3">
-        <router-link to="imprint" class="ownFont">Imprint</router-link>
+        <a href="https://mapping.bio" target="_blank"
+          ><img :src="mappingBioLogo" class="mappingBioLogo" /></a
+        ><br />
+        <router-link to="imprint" class="ownFont mappingBioLogo"
+          >About</router-link
+        >
+        <text class="pipe">&nbsp;|&nbsp;</text>
+        <router-link to="imprint" class="ownFont mappingBioLogo"
+          >Imprint</router-link
+        >
       </div>
 
       <div class="column">
@@ -31,6 +40,7 @@ export default {
     return {
       sgnLogo: require("@/assets/sgnLogoH.png"),
       biodtLogo: require("@/assets/biodtLogo.png"),
+      mappingBioLogo: require("@/assets/mapping.bio.png"),
 
       version: process.env.VUE_APP_VERSION,
     };
@@ -50,6 +60,16 @@ export default {
 </style>
 
 <style scoped>
+.pipe {
+  color: white;
+  font-weight: 500;
+}
+.mappingBioLogo {
+  width: 25%;
+  margin-top: 5px;
+  margin-left: 3px;
+}
+
 .sgnLogo {
   width: 34%;
   margin-top: 0px;
