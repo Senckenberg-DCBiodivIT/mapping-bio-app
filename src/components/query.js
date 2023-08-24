@@ -11,6 +11,19 @@ export const query = {
     }
     `,
 
+  getAllClasses_OWL: `
+  PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+        prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
+        prefix owl: <http://www.w3.org/2002/07/owl#>
+		    prefix skos:<http://www.w3.org/2004/02/skos/core#>
+
+    SELECT ?subject ?predicate ?object
+    WHERE {
+      ?subject a owl:Class .
+      ?subject ?predicate ?object
+    }
+    `,
+
   firstLevelClass_SKOS: `
     PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
         prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
@@ -38,7 +51,13 @@ export const query = {
           ?subject rdfs:label ?label .
           
           FILTER NOT EXISTS { ?subject owl:deprecated "true"^^<http://www.w3.org/2001/XMLSchema#boolean> }
-          FILTER NOT EXISTS { ?subject rdfs:subClassOf ?any }
+          FILTER NOT EXISTS { 
+            ?subject rdfs:subClassOf ?any .
+            ?any a owl:Class
+
+          }
+
+          
     }
     `,
 

@@ -1,13 +1,23 @@
 <template>
   <div class="is-active">
+    {{ headerStyle }}
     <div class="columns">
       <div class="column is-3">
-        <router-link to="imprint" class="ownFont">Imprint</router-link>
+        <a href="https://mapping.bio" target="_blank"
+          ><img :src="mappingBioLogo" class="mappingBioLogo" /></a
+        ><br />
+        <router-link to="imprint" class="ownFont mappingBioLogo"
+          >About</router-link
+        >
+        <text class="pipe">&nbsp;|&nbsp;</text>
+        <router-link to="imprint" class="ownFont mappingBioLogo"
+          >Imprint</router-link
+        >
       </div>
 
       <div class="column">
-        <div class="has-text-centered ownFont bigText">
-          mapping.bio <br />Mapping Service V. {{ version }}
+        <div class="has-text-centered ownFont bigText testfooter">
+          mapping.bio Mapping Service V. {{ version }}
         </div>
       </div>
 
@@ -28,15 +38,38 @@ export default {
   name: "TheHeader",
   data() {
     return {
-      sgnLogo: require("../assets/sgnLogoH.png"),
-      biodtLogo: require("../assets/biodtLogo.png"),
+      sgnLogo: require("@/assets/sgnLogoH.png"),
+      biodtLogo: require("@/assets/biodtLogo.png"),
+      mappingBioLogo: require("@/assets/mapping.bio.png"),
+
       version: process.env.VUE_APP_VERSION,
     };
   },
 };
 </script>
 
+<style scoped lang="scss">
+.is-active {
+  background-image: url("@/assets/header_bg.png");
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+
+  background-color: #349a34;
+}
+</style>
+
 <style scoped>
+.pipe {
+  color: white;
+  font-weight: 500;
+}
+.mappingBioLogo {
+  width: 25%;
+  margin-top: 5px;
+  margin-left: 3px;
+}
+
 .sgnLogo {
   width: 34%;
   margin-top: 0px;
@@ -48,15 +81,17 @@ export default {
   margin-top: 3px;
   margin-right: 3px;
 }
-.is-active {
-  background-color: #679c60;
-}
 
 .ownFont {
   color: white !important;
 }
 
 .bigText {
-  font-size: 2em;
+  font-size: 1.75rem;
+}
+
+.testfooter {
+  position: relative;
+  margin-top: 10%;
 }
 </style>

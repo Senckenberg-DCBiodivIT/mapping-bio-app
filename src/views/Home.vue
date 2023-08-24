@@ -1,9 +1,5 @@
 <template>
   <!-- TODO: mappingTable as an own component with an store segment? -->
-  <div class="has-text-centered" style="margin-top: 1em; font-size: 2em">
-    Mapping Editor
-  </div>
-  <br />
 
   <!-- mappping table, CSV, RDF projection -->
   <section class="box">
@@ -14,14 +10,20 @@
       @close="openCloseTableView = false"
     >
       <template #trigger>
-        <p class="has-text-centered">
-          <o-button
-            variant="primary"
-            aria-controls="mappingTableUI_ID"
-            v-text="openCloseTableView ? 'Close table view' : 'Open table view'"
+        <div class="has-text-centered">
+          <div
+            class="has-text-centered"
+            style="margin-top: 1em; font-size: 2em"
           >
-          </o-button>
-        </p>
+            Mapping Editor&nbsp;<o-button
+              variant="primary"
+              aria-controls="mappingTableUI_ID"
+              iconPack="fa"
+              :iconLeft="openCloseTableView ? 'arrow-up' : 'arrow-down'"
+            >
+            </o-button>
+          </div>
+        </div>
         <br />
       </template>
       <div class="notification">
@@ -51,7 +53,7 @@
               />
               <span class="file-cta">
                 <span class="file-icon">
-                  <i class="fas fa-upload"></i>
+                  <i class="fa fa-upload"></i>
                 </span>
                 <span class="file-label">Choose a mapping file...</span>
               </span>
@@ -109,6 +111,8 @@
   </section>
 
   <!-- Debug -->
+  <!-- this.test.queueCount: {{ test.queueCount }} -->
+
   <!-- this.tree.value: {{ this.tree.value }}<br /><br /> -->
   <!-- this.tree: {{ this.tree }} -->
   <!-- <br />
@@ -164,7 +168,7 @@
             />
             <span class="file-cta">
               <span class="file-icon">
-                <i class="fas fa-upload"></i>
+                <i class="fa fa-upload"></i>
               </span>
               <span class="file-label">Choose a RDF/XML or TTL file…</span>
             </span>
@@ -183,8 +187,8 @@
           :options="tree.options.source"
           :alwaysOpen="true"
           :open-direction="'bottom'"
-          :load-options="loadOntologyChild"
         />
+        <!-- :load-options="loadOntologyChild" -->
         <!-- :default-expand-level="1" -->
       </div>
       <div class="column" />
@@ -207,7 +211,7 @@
             />
             <span class="file-cta">
               <span class="file-icon">
-                <i class="fas fa-upload"></i>
+                <i class="fa fa-upload"></i>
               </span>
               <span class="file-label">Choose a RDF/XML or TTL file…</span>
             </span>
@@ -226,8 +230,8 @@
           :options="tree.options.target"
           :alwaysOpen="true"
           :open-direction="'bottom'"
-          :load-options="loadOntologyChild"
         />
+        <!-- :load-options="loadOntologyChild" -->
         <!-- :default-expand-level="2" -->
       </div>
     </div>
@@ -330,7 +334,7 @@ export default {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
     return {
-      testObj: {},
+      test: { queueCount: 0 },
       intervalPerformance: false,
 
       openCloseTableView: true, // false: closed, true: open
@@ -444,6 +448,7 @@ export default {
 
       rdfObj: {
         engines: { source: [], target: [], mapping: {} },
+        classes: { source: {}, target: {} }, // A helper object to indicate unused classes (owl:Class) for error recognition
       },
       query: query, // external stored queries for a better readability
 
@@ -1026,6 +1031,113 @@ export default {
 
         // Reader definition
         reader.onload = async (e, that = this) => {
+          // Inner functions
+          async function step1_getAllClasses() {
+            console.log("step1_getAllClasses.getAllClasses()");
+
+            let tempBindingsStream = null;
+
+            tempBindingsStream = await that.rdfObj.engines[position][
+              idxEngine
+            ].queryBindings(that.query.getAllClasses_OWL);
+
+            tempBindingsStream.on("data", (bindings) => {
+              // console.log("debug bindings", bindings);
+              let classID = bindings.entries.hashmap.node.children[0].value.id;
+              if (!that.rdfObj.classes[position][classID]) {
+                that.rdfObj.classes[position][classID] = false;
+              }
+            });
+
+            tempBindingsStream.on("error", (error) => console.log(error));
+
+            tempBindingsStream.on("end", () => {
+              console.log(
+                "step1_getAllClasses ready",
+                that.rdfObj.classes[position]
+              );
+
+              step2_firstLevelClasses();
+            });
+          }
+
+          async function step2_firstLevelClasses() {
+            //
+            let tempBindingsStream = null;
+
+            if (that.tree.skos_flag[position]) {
+              tempBindingsStream = await that.rdfObj.engines[position][
+                idxEngine
+              ].queryBindings(that.query.firstLevelClass_SKOS);
+            } else {
+              tempBindingsStream = await that.rdfObj.engines[position][
+                idxEngine
+              ].queryBindings(that.query.firstLevelClass_OWL);
+            }
+            that.test.queueCount++;
+
+            tempBindingsStream.on("data", (bindings) => {
+              // console.log("bindings", bindings);
+
+              // detected class
+              that.rdfObj.classes[position][
+                bindings.entries.hashmap.node.children[0].value.id
+              ] = true;
+
+              const id =
+                bindings.entries.hashmap.node.children[0].value.id.replaceAll(
+                  '"',
+                  ""
+                ) + `_${position}`;
+
+              var oldEneteryFlag = false;
+              // You can use only "@en" labels. On this way "en-US" is valid too
+
+              let labelValid =
+                (that.tree.skos_flag[position] &&
+                  bindings.entries.hashmap.node.children[1].value.id.includes(
+                    "@en"
+                  )) ||
+                !that.tree.skos_flag[position];
+
+              if (labelValid) {
+                for (var treeItem of tree_options) {
+                  if (treeItem.id == id) {
+                    oldEneteryFlag = true;
+                  }
+                }
+
+                if (!oldEneteryFlag) {
+                  that
+                    .loadOntologyChild(that.cleanSuffix(id), position)
+                    .then((children) => {
+                      tree_options.push({
+                        id: id,
+                        label:
+                          bindings.entries.hashmap.node.children[1].value.id.replaceAll(
+                            '"',
+                            ""
+                          ),
+                        children: children,
+                        position: position, // for the sparql engine (source or engine, left or right) //TODO: do we still need it?
+                      });
+                    });
+                }
+              }
+            });
+
+            tempBindingsStream.on("error", (error) => console.log(error));
+
+            tempBindingsStream.on("end", () => {
+              console.log("tree_options", tree_options);
+
+              that.tree.options[position] = tree_options;
+              that.test.queueCount--;
+
+              console.log("step2_firstLevelClasses ready");
+            });
+          }
+
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           const ontologyStream = require("streamify-string")(e.target.result);
 
@@ -1042,73 +1154,17 @@ export default {
           this.tree.skos_flag[position] =
             e.target.result.includes("xmlns:skos");
 
-          // First level visualisation
-          var bindingsStream = null;
+          // Step 1 - detect all classes
+          // At first for OWL
+          step1_getAllClasses();
 
-          if (this.tree.skos_flag[position]) {
-            bindingsStream = await that.rdfObj.engines[position][
-              idxEngine
-            ].queryBindings(that.query.firstLevelClass_SKOS);
-          } else {
-            bindingsStream = await that.rdfObj.engines[position][
-              idxEngine
-            ].queryBindings(that.query.firstLevelClass_OWL);
-          }
-          bindingsStream.on("data", (bindings) => {
-            console.log("bindings", bindings);
+          // Step 2 - detect all first level classes ( not a subclass from another one)
+          // Chained from step 1
 
-            const id =
-              bindings.entries.hashmap.node.children[0].value.id.replaceAll(
-                '"',
-                ""
-              ) + `_${position}`;
+          // Step 3 - detect all children-nodes
+          // Chained from step 2
 
-            var oldEneteryFlag = false;
-            // You can use only "@en" labels. On this way "en-US" is valid too
-
-            let labelValid =
-              (this.tree.skos_flag[position] &&
-                bindings.entries.hashmap.node.children[1].value.id.includes(
-                  "@en"
-                )) ||
-              !this.tree.skos_flag[position];
-
-            if (labelValid) {
-              for (var treeItem of tree_options) {
-                if (treeItem.id == id) {
-                  oldEneteryFlag = true;
-                }
-              }
-
-              if (!oldEneteryFlag) {
-                tree_options.push({
-                  id: id,
-                  label:
-                    bindings.entries.hashmap.node.children[1].value.id.replaceAll(
-                      '"',
-                      ""
-                    ),
-                  children: null,
-                  position: position, // for the sparql engine (source or engine, left or right)
-                });
-              }
-            }
-          });
-
-          bindingsStream.on("error", (error) => console.log(error));
-
-          bindingsStream.on("end", () => {
-            console.log("tree_options", tree_options);
-            that.tree.options[position] = tree_options;
-
-            var treesToHandle = document.getElementsByClassName(
-              "vue-treeselect__menu"
-            );
-            for (var item of treesToHandle) {
-              item.style.removeProperty("max-height");
-            }
-            console.log("ready");
-          });
+          // Step 4 - detect all unmasked classes and build a new first leven structure
         };
 
         // Read file
@@ -1131,30 +1187,32 @@ export default {
 
       console.groupEnd();
     },
+    async testFKT() {
+      return "ack";
+    },
 
-    async loadOntologyChild(param) {
-      console.group("loadOntologyChild", param);
-      var tempChild = [];
-
-      var id = param.parentNode.id
-        .replace("_source", "")
-        .replace("_target", "");
-
-      var position = param.parentNode.position;
-      var parentNode = param.parentNode;
-
+    async loadOntologyChild(id, position) {
+      console.group("loadOntologyChild", id);
+      var nodeChildren = [];
       var query = "";
+
+      // console.log("id", id);
+      // console.log("position", position);
+
       if (this.tree.skos_flag[position]) {
         query = this.query.subclassOf_SKOS.replaceAll("ID_HERE", id);
       } else {
         query = this.query.subclassOf_OWL.replaceAll("ID_HERE", id);
       }
+      // console.log("query", query);
 
       for (var singleEngine of this.rdfObj.engines[position]) {
         var bindingsStream = await singleEngine.queryBindings(query);
 
+        this.test.queueCount++;
+
         bindingsStream.on("data", (bindings) => {
-          console.log("bindings", bindings);
+          // console.log("bindings", bindings);
           const childID =
             bindings.entries.hashmap.node.children[1].value.id.replaceAll(
               '"',
@@ -1162,45 +1220,52 @@ export default {
             ) + `_${position}`;
 
           var oldEneteryFlag = false;
-          // You can use only "@en" labels. On this way "en-US" is valid too
 
+          // You can use only "@en" labels. On this way "en-US" is valid too
           let labelValid =
             (this.tree.skos_flag[position] &&
               bindings.entries.hashmap.node.children[0].value.id.includes(
                 "@en"
               )) ||
             !this.tree.skos_flag[position];
-
           if (labelValid) {
-            for (var treeItem of tempChild) {
+            for (var treeItem of nodeChildren) {
               if (treeItem.id == id) {
                 oldEneteryFlag = true;
               }
             }
           }
-
           if (!oldEneteryFlag && labelValid) {
-            tempChild.push({
-              id: childID,
-              label:
-                bindings.entries.hashmap.node.children[0].value.id.replaceAll(
-                  '"',
-                  ""
-                ),
-              children: null,
-              position: position, // for the sparql engine
+            this.loadOntologyChild(
+              bindings.entries.hashmap.node.children[1].value.id,
+              position
+            ).then((children) => {
+              nodeChildren.push({
+                id: childID,
+                label:
+                  bindings.entries.hashmap.node.children[0].value.id.replaceAll(
+                    '"',
+                    ""
+                  ),
+                children: children,
+                position: position, // for the sparql engine
+              });
             });
           }
         });
-
         bindingsStream.on("end", () => {
-          // console.log("tempChild", tempChild[0]);
-          parentNode.children = tempChild;
-          param.callback();
+          console.log("nodeChildren .end", nodeChildren);
+          this.test.queueCount--;
+
+          // return nodeChildren; // null if no one child or [children...]
+          // return null; //nodeChildren; // null if no one child or [children...]
         });
+
+        return nodeChildren;
       }
 
       console.groupEnd();
+      // return null; // null if no one child or [children...]
     },
 
     loadMappingTable(event) {
@@ -1453,7 +1518,7 @@ export default {
             - or delete a relation between two ontologies
       */
 
-      // console.group("refreshMappingtableUI");
+      console.group("refreshMappingtableUI");
       var currentState = [];
       console.log("this.mappingtable", this.mappingtable);
 
@@ -1484,9 +1549,15 @@ export default {
       //   });
       // }
       console.log("currentState", currentState);
-      window.mappingDataTable.load(currentState);
 
-      // console.groupEnd();
+      if (currentState.length == 0) {
+        window.mappingDataTable.load([[]]);
+        window.mappingDataTable.removeRow(0);
+      } else {
+        window.mappingDataTable.load(currentState);
+      }
+
+      console.groupEnd();
     },
 
     // Tree interactions
@@ -1637,6 +1708,7 @@ export default {
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   async mounted() /* OK */ {
+    console.log("mount");
     window.mappingDataTable = new AppendGrid({
       element: document.getElementById("mapppingtableCSV"),
       initRows: 0,
@@ -1657,8 +1729,10 @@ export default {
     });
     this.refreshMappingtableUI();
 
+    // console.log("def tree");
+
     // this.tree = {
-    //   value: { source: [1, 2, 3, 4, 5, 6], target: [] },
+    //   value: { source: [], target: [] },
     //   options: {
     //     source: [
     //       { label: "leaf alternate placement", id: 1 },
@@ -1681,19 +1755,26 @@ export default {
     //       { label: "leaf morphology trait", id: 9 },
     //     ],
     //   },
+    //   reloadKey: { source: 0, target: 0 }, // reload index for VUE reloads
+    //   skos_flag: { source: false, target: false }, // we need to modify queries if it's a skos notation
     // };
 
     // function callback() {
+    //   console.log("TEST");
     //   var allDivs = document.getElementsByTagName("*");
-    //   for (var left of [1, 2, 3, 4, 5, 6]) {
+    //   var source = [1, 2, 3, 4, 5, 6];
+    //   var target = [7, 8, 9, 10, 11, 12];
+
+    //   for (var left in source) {
     //     var from = null,
     //       to = null;
-    //     var temp = left + 6;
+
     //     for (var singleDiv of allDivs) {
-    //       console.log("left", left);
-    //       if (singleDiv.getAttribute("data-id") == left) {
+    //       console.log("left", source[left]);
+
+    //       if (singleDiv.getAttribute("data-id") == source[left]) {
     //         from = singleDiv;
-    //       } else if (singleDiv.getAttribute("data-id") == `${temp}`) {
+    //       } else if (singleDiv.getAttribute("data-id") == target[left]) {
     //         to = singleDiv;
     //       }
 
@@ -1706,11 +1787,33 @@ export default {
     //     }
     //   }
     // }
-
+    // console.log("setTimeout");
     // setTimeout(function () {
     //   console.log("Callback Funktion wird aufgerufen");
     //   callback(this.tree);
     // }, 2000);
+  },
+  watch: {
+    test: {
+      handler(newValue) {
+        if (newValue.queueCount === 0) {
+          console.log("newValue", newValue);
+
+          console.log("detected: ", this.rdfObj.classes);
+
+          console.log("that.tree.options", this.tree.options);
+
+          this.resetArrows();
+          // var treesToHandle = document.getElementsByClassName(
+          //   "vue-treeselect__menu"
+          // );
+          // for (var item of treesToHandle) {
+          //   item.style.removeProperty("max-height");
+          // }
+        }
+      },
+      deep: true,
+    },
   },
 };
 </script>
