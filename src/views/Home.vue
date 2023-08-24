@@ -111,6 +111,8 @@
   </section>
 
   <!-- Debug -->
+  <!-- this.test.queueCount: {{ test.queueCount }} -->
+
   <!-- this.tree.value: {{ this.tree.value }}<br /><br /> -->
   <!-- this.tree: {{ this.tree }} -->
   <!-- <br />
@@ -332,7 +334,7 @@ export default {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
     return {
-      testObj: {},
+      test: { queueCount: 0 },
       intervalPerformance: false,
 
       openCloseTableView: true, // false: closed, true: open
@@ -1054,6 +1056,7 @@ export default {
                 "step1_getAllClasses ready",
                 that.rdfObj.classes[position]
               );
+
               step2_firstLevelClasses();
             });
           }
@@ -1071,6 +1074,8 @@ export default {
                 idxEngine
               ].queryBindings(that.query.firstLevelClass_OWL);
             }
+            that.test.queueCount++;
+
             tempBindingsStream.on("data", (bindings) => {
               // console.log("bindings", bindings);
 
@@ -1103,16 +1108,20 @@ export default {
                 }
 
                 if (!oldEneteryFlag) {
-                  tree_options.push({
-                    id: id,
-                    label:
-                      bindings.entries.hashmap.node.children[1].value.id.replaceAll(
-                        '"',
-                        ""
-                      ),
-                    children: null,
-                    position: position, // for the sparql engine (source or engine, left or right) //TODO: do we still need it?
-                  });
+                  that
+                    .loadOntologyChild(that.cleanSuffix(id), position)
+                    .then((children) => {
+                      tree_options.push({
+                        id: id,
+                        label:
+                          bindings.entries.hashmap.node.children[1].value.id.replaceAll(
+                            '"',
+                            ""
+                          ),
+                        children: children,
+                        position: position, // for the sparql engine (source or engine, left or right) //TODO: do we still need it?
+                      });
+                    });
                 }
               }
             });
@@ -1121,16 +1130,10 @@ export default {
 
             tempBindingsStream.on("end", () => {
               console.log("tree_options", tree_options);
-              console.log("detected: ", that.rdfObj.classes[position]);
 
               that.tree.options[position] = tree_options;
+              that.test.queueCount--;
 
-              var treesToHandle = document.getElementsByClassName(
-                "vue-treeselect__menu"
-              );
-              for (var item of treesToHandle) {
-                item.style.removeProperty("max-height");
-              }
               console.log("step2_firstLevelClasses ready");
             });
           }
@@ -1184,30 +1187,32 @@ export default {
 
       console.groupEnd();
     },
+    async testFKT() {
+      return "ack";
+    },
 
-    async loadOntologyChild(param) {
-      console.group("loadOntologyChild", param);
-      var tempChild = [];
-
-      var id = param.parentNode.id
-        .replace("_source", "")
-        .replace("_target", "");
-
-      var position = param.parentNode.position;
-      var parentNode = param.parentNode;
-
+    async loadOntologyChild(id, position) {
+      console.group("loadOntologyChild", id);
+      var nodeChildren = [];
       var query = "";
+
+      // console.log("id", id);
+      // console.log("position", position);
+
       if (this.tree.skos_flag[position]) {
         query = this.query.subclassOf_SKOS.replaceAll("ID_HERE", id);
       } else {
         query = this.query.subclassOf_OWL.replaceAll("ID_HERE", id);
       }
+      // console.log("query", query);
 
       for (var singleEngine of this.rdfObj.engines[position]) {
         var bindingsStream = await singleEngine.queryBindings(query);
 
+        this.test.queueCount++;
+
         bindingsStream.on("data", (bindings) => {
-          console.log("bindings", bindings);
+          // console.log("bindings", bindings);
           const childID =
             bindings.entries.hashmap.node.children[1].value.id.replaceAll(
               '"',
@@ -1215,45 +1220,52 @@ export default {
             ) + `_${position}`;
 
           var oldEneteryFlag = false;
-          // You can use only "@en" labels. On this way "en-US" is valid too
 
+          // You can use only "@en" labels. On this way "en-US" is valid too
           let labelValid =
             (this.tree.skos_flag[position] &&
               bindings.entries.hashmap.node.children[0].value.id.includes(
                 "@en"
               )) ||
             !this.tree.skos_flag[position];
-
           if (labelValid) {
-            for (var treeItem of tempChild) {
+            for (var treeItem of nodeChildren) {
               if (treeItem.id == id) {
                 oldEneteryFlag = true;
               }
             }
           }
-
           if (!oldEneteryFlag && labelValid) {
-            tempChild.push({
-              id: childID,
-              label:
-                bindings.entries.hashmap.node.children[0].value.id.replaceAll(
-                  '"',
-                  ""
-                ),
-              children: null,
-              position: position, // for the sparql engine
+            this.loadOntologyChild(
+              bindings.entries.hashmap.node.children[1].value.id,
+              position
+            ).then((children) => {
+              nodeChildren.push({
+                id: childID,
+                label:
+                  bindings.entries.hashmap.node.children[0].value.id.replaceAll(
+                    '"',
+                    ""
+                  ),
+                children: children,
+                position: position, // for the sparql engine
+              });
             });
           }
         });
-
         bindingsStream.on("end", () => {
-          // console.log("tempChild", tempChild[0]);
-          parentNode.children = tempChild;
-          param.callback();
+          console.log("nodeChildren .end", nodeChildren);
+          this.test.queueCount--;
+
+          // return nodeChildren; // null if no one child or [children...]
+          // return null; //nodeChildren; // null if no one child or [children...]
         });
+
+        return nodeChildren;
       }
 
       console.groupEnd();
+      // return null; // null if no one child or [children...]
     },
 
     loadMappingTable(event) {
@@ -1780,6 +1792,28 @@ export default {
     //   console.log("Callback Funktion wird aufgerufen");
     //   callback(this.tree);
     // }, 2000);
+  },
+  watch: {
+    test: {
+      handler(newValue) {
+        if (newValue.queueCount === 0) {
+          console.log("newValue", newValue);
+
+          console.log("detected: ", this.rdfObj.classes);
+
+          console.log("that.tree.options", this.tree.options);
+
+          this.resetArrows();
+          // var treesToHandle = document.getElementsByClassName(
+          //   "vue-treeselect__menu"
+          // );
+          // for (var item of treesToHandle) {
+          //   item.style.removeProperty("max-height");
+          // }
+        }
+      },
+      deep: true,
+    },
   },
 };
 </script>
