@@ -42,15 +42,17 @@ export default {
   watch: {
     newMessage: {
       handler(messages) {
-        for (var message of messages) {
-          this.id++;
-          this.messages.push({
-            content: message[0],
-            severity: message[1],
-            id: this.id,
-          });
+        if (messages.length > 0) {
+          for (var message of messages) {
+            this.id++;
+            this.messages.push({
+              content: message[0],
+              severity: message[1],
+              id: this.id,
+            });
+          }
+          this.$emit("resetMessage");
         }
-        this.$emit("resetMessage");
       },
       deep: true,
     },
