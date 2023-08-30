@@ -1,4 +1,5 @@
 <template>
+  <TheMessenger :newMessage="message" @resetMessage="message = []" />
   <!-- TODO: mappingTable as an own component with an store segment? -->
 
   <!-- mappping table, CSV, RDF projection -->
@@ -187,6 +188,7 @@
           :options="tree.options.source"
           :alwaysOpen="true"
           :open-direction="'bottom'"
+          :default-expand-level="100"
         />
         <!-- :load-options="loadOntologyChild" -->
         <!-- :default-expand-level="1" -->
@@ -230,6 +232,7 @@
           :options="tree.options.target"
           :alwaysOpen="true"
           :open-direction="'bottom'"
+          :default-expand-level="100"
         />
         <!-- :load-options="loadOntologyChild" -->
         <!-- :default-expand-level="2" -->
@@ -292,6 +295,9 @@
 </template>
 
 <script setup>
+// Messanger
+import TheMessenger from "@/components/TheMessenger";
+
 // import the component
 import Treeselect from "vue3-treeselect";
 // import the styles
@@ -336,6 +342,8 @@ export default {
     return {
       test: { queueCount: 0 },
       intervalPerformance: false,
+
+      message: [], //Format: ["text", "kind"]
 
       openCloseTableView: true, // false: closed, true: open
       openCloseSecondStepView: false, // false: closed, true: open
@@ -493,6 +501,12 @@ export default {
   },
 
   methods: {
+    // Message
+    newMessage(text, variant) {
+      /* FYI variant: // primary // info // warning // danger*/
+      this.message.push([text, variant]);
+    },
+
     // Exports
     downloadMappingExport(txtContent, fileExtension) {
       var exportElement = document.createElement("a");
@@ -1013,7 +1027,7 @@ export default {
     // Load
     loadOntology(event, position) /**/ {
       console.group("loadOntology", position);
-
+      this.newMessage("Loading data", "primary");
       // Reset the widget
       this.resetArrows();
 
@@ -1024,6 +1038,8 @@ export default {
 
       // Load local files
       for (let file of event.target.files) {
+        this.newMessage("Loading local files", "primary");
+
         let fileExtension = file.name.split(".").slice(-1)[0].toLowerCase();
 
         let reader = new FileReader();
@@ -1804,12 +1820,6 @@ export default {
           console.log("that.tree.options", this.tree.options);
 
           this.resetArrows();
-          // var treesToHandle = document.getElementsByClassName(
-          //   "vue-treeselect__menu"
-          // );
-          // for (var item of treesToHandle) {
-          //   item.style.removeProperty("max-height");
-          // }
         }
       },
       deep: true,
