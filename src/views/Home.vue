@@ -312,7 +312,7 @@ export default {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
     return {
-      test: { queueCount: 0 },
+      test: {},
       intervalPerformance: false,
 
       message: [], //Format: ["text", "kind"]
@@ -341,6 +341,7 @@ export default {
         classes: { source: {}, target: {} }, // A helper object to indicate unused classes (owl:Class) for error recognition
       },
       query: query, // external stored queries for a better readability
+      queueCount: 0,
 
       dropdownSelectedItem: 0,
       dropdownItems: [
@@ -969,7 +970,7 @@ export default {
                 idxEngine
               ].queryBindings(that.query.firstLevelClass_OWL);
             }
-            that.test.queueCount++;
+            that.queueCount++;
 
             tempBindingsStream.on("data", (bindings) => {
               // console.log("bindings", bindings);
@@ -1027,7 +1028,7 @@ export default {
               console.log("tree_options", tree_options);
 
               that.tree.options[position] = tree_options;
-              that.test.queueCount--;
+              that.queueCount--;
 
               console.log("step2_firstLevelClasses ready");
             });
@@ -1105,7 +1106,7 @@ export default {
       for (var singleEngine of this.rdfObj.engines[position]) {
         var bindingsStream = await singleEngine.queryBindings(query);
 
-        this.test.queueCount++;
+        this.queueCount++;
 
         bindingsStream.on("data", (bindings) => {
           // console.log("bindings", bindings);
@@ -1151,7 +1152,7 @@ export default {
         });
         bindingsStream.on("end", () => {
           console.log("nodeChildren .end", nodeChildren);
-          this.test.queueCount--;
+          this.queueCount--;
 
           // return nodeChildren; // null if no one child or [children...]
           // return null; //nodeChildren; // null if no one child or [children...]
@@ -1574,19 +1575,13 @@ export default {
     // }, 2000);
   },
   watch: {
-    test: {
+    queueCount: {
       handler(newValue) {
-        if (newValue.queueCount === 0) {
-          console.log("newValue", newValue);
-
-          console.log("detected: ", this.rdfObj.classes);
-
-          console.log("that.tree.options", this.tree.options);
-
+        if (newValue === 0) {
           this.resetArrows();
         }
       },
-      deep: true,
+      deep: false,
     },
   },
 };
