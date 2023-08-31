@@ -51,7 +51,7 @@ import { query } from "@/components/query";
 export default {
   name: "TheMappingtable",
   props: ["externalMappingTable"],
-  emit: [],
+  emit: ["ackNewMapping"],
   data() {
     return {
       query: query, // external stored queries for a better readability
@@ -192,6 +192,37 @@ export default {
       }
 
       // console.groupEnd();
+    },
+
+    updateMapping(id, param) {
+      /*
+      Here you can update the mapping table data after a change in the UI
+      like "relation" or "comment"
+      */
+
+      id--; // Table-widget counts from 1 to n
+
+      console.group("updateMapping", id, param);
+
+      // Get updated value
+      var updatedValue = window.mappingDataTable.getCtrlValue(param, id);
+      var mappingtableSourceID = window.mappingDataTable.getCtrlValue(
+        "sourceLink",
+        id
+      );
+      var mappingtableTargetID = window.mappingDataTable.getCtrlValue(
+        "targetLink",
+        id
+      );
+
+      // Set updated value
+      this.mappingtable[mappingtableSourceID][mappingtableTargetID][param] =
+        updatedValue;
+
+      // TODO: rewrite => Update the tree view
+      // this.showArrowFromMappingtable(id + 1); // This function works with internal table-widget index. Table counts from 1 to n
+
+      console.groupEnd();
     },
 
     loadCSV(data) {

@@ -2,7 +2,10 @@
   <TheMessenger :newMessage="message" @resetMessage="message = []" />
 
   <!-- mappping table, CSV, RDF projection -->
-  <TheMappingtable :externalMappingTable="mappingtable" />
+  <TheMappingtable
+    :externalMappingTable="mappingfile"
+    @ackNewMapping="newMappingRow = []"
+  />
 
   <!-- Buttons for mapings (choose, show and export) 
   TODO: an own component or inline? -->
@@ -313,7 +316,9 @@ export default {
       // TODO: remove after split
       openCloseSecondStepView: false, // false: closed, true: open
 
-      mappingtable: {}, //  {result, fileExtension}
+      mappingtable: [],
+      mappingfile: {}, //  {result, fileExtension}
+      newMappingRow: [],
 
       sourceFilename: "",
       targetFilename: "",
@@ -1172,10 +1177,9 @@ export default {
         .toLowerCase();
 
       let reader = new FileReader();
-      let mimeType = "";
 
       reader.onload = async (e) => {
-        this.mappingtable = {
+        this.mappingfile = {
           result: e.target.result,
           fileExtension: fileExtension,
         };
@@ -1192,83 +1196,14 @@ export default {
           this.mappingtableExtension === "ttl" ||
           this.mappingtableExtension === "sssom"
         ) {
-          console.log("RDF (XML, TTL or SSSOM) selected");
-
-          // Reader definition
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const ontologyStream = require("streamify-string")(e.target.result);
-
-          const quadStream = rdfParser.parse(ontologyStream, {
-            contentType: mimeType,
-            baseIRI: "http://example.org",
-          });
-
-          const store = await storeStream(quadStream);
-          this.rdfObj.engines["mapping"] = new Engine(store);
-
-          var bindingsStream = await this.rdfObj.engines[
-            "mapping"
-          ].queryBindings(this.query.testQuery);
-          // ].queryBindings(this.query.mappingRow);
-
-          bindingsStream.on("data", (bindings) => {
-            console.log("bindings", bindings);
-            // console.log(
-            //   "bindings.entries.hashmap.node",
-            //   bindings.entries.hashmap.node
-            // );
-
-            // if (
-            //   this.mappingtable[
-            //     bindings.entries.hashmap.node.children[0].value.value
-            //   ] == undefined
-            // ) {
-            //   this.mappingtable[
-            //     bindings.entries.hashmap.node.children[0].value.value
-            //   ] = {};
-            // }
-            // this.mappingtable[
-            //   bindings.entries.hashmap.node.children[0].value.value
-            // ][bindings.entries.hashmap.node.children[1].value.value] = {
-            //   sourceTitle: "Enter a title for the CSV export here",
-            //   targetTitle: "Enter a title for the CSV export here",
-            //   relation: bindings.entries.hashmap.node.children[2].value.value,
-            //   comment: "Enter a comment for the CSV export here",
-            // };
-          });
-
-          // bindingsStream.on("end", (bindings) => {
-          //   console.log("this.mappingtable", this.mappingtable);
-
-          //   this.mappingtableFilename = file.name;
-          //   this.refreshMappingtableUI();
-          // });
+          //
+        } else {
+          // TODO: Error
         }
       };
 
       // Read file
-      // TTL
-      if (fileExtension == "csv") {
-        mimeType = "";
-        reader.readAsText(file);
-      }
-      // TTL
-      else if (fileExtension == "ttl" || fileExtension == "sssom") {
-        // TODO: take care about sssom
-        mimeType = "text/turtle";
-        reader.readAsText(file);
-      }
-      // RDF/XML
-      else if (fileExtension == "rdf" || fileExtension == "xml") {
-        mimeType = "application/rdf+xml";
-        reader.readAsText(file);
-      }
-      // ERROR
-      else {
-        // ERROR;
-      }
-
-      // reader.readAsText(file);
+      reader.readAsText(file);
 
       console.groupEnd();
     },
@@ -1308,7 +1243,7 @@ export default {
             };
           }
         }
-        this.refreshMappingtableUI();
+        // this.refreshMappingtableUI();
         this.resetArrows();
       }
 
@@ -1320,36 +1255,36 @@ export default {
       console.groupEnd();
     },
 
-    updateMapping(id, param) {
-      /*
-      Here you can update the mapping table data after a change in the UI
-      like "relation" or "comment"
-      */
+    // updateMapping(id, param) {
+    //   /*
+    //   Here you can update the mapping table data after a change in the UI
+    //   like "relation" or "comment"
+    //   */
 
-      id--; // Table-widget counts from 1 to n
+    //   id--; // Table-widget counts from 1 to n
 
-      console.group("updateMapping", id, param);
+    //   console.group("updateMapping", id, param);
 
-      // Get updated value
-      var updatedValue = window.mappingDataTable.getCtrlValue(param, id);
-      var mappingtableSourceID = window.mappingDataTable.getCtrlValue(
-        "sourceLink",
-        id
-      );
-      var mappingtableTargetID = window.mappingDataTable.getCtrlValue(
-        "targetLink",
-        id
-      );
+    //   // Get updated value
+    //   var updatedValue = window.mappingDataTable.getCtrlValue(param, id);
+    //   var mappingtableSourceID = window.mappingDataTable.getCtrlValue(
+    //     "sourceLink",
+    //     id
+    //   );
+    //   var mappingtableTargetID = window.mappingDataTable.getCtrlValue(
+    //     "targetLink",
+    //     id
+    //   );
 
-      // Set updated value
-      this.mappingtable[mappingtableSourceID][mappingtableTargetID][param] =
-        updatedValue;
+    //   // Set updated value
+    //   this.mappingtable[mappingtableSourceID][mappingtableTargetID][param] =
+    //     updatedValue;
 
-      // Update the tree view
-      this.showArrowFromMappingtable(id + 1); // This function works with internal table-widget index. Table counts from 1 to n
+    //   // Update the tree view
+    //   this.showArrowFromMappingtable(id + 1); // This function works with internal table-widget index. Table counts from 1 to n
 
-      console.groupEnd();
-    },
+    //   console.groupEnd();
+    // },
 
     // TODO: remove after split
     refreshMappingtableUI() {
