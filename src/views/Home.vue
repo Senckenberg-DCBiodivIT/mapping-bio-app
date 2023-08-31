@@ -1,5 +1,5 @@
 <template>
-  <TheMessenger :newMessage="message" @resetMessage="message = []" />
+  <TheMessenger />
 
   <!-- mappping table, CSV, RDF projection -->
   <TheMappingtable
@@ -269,8 +269,12 @@
 import TheMessenger from "@/components/TheMessenger";
 import TheMappingtable from "@/components/TheMappingtable";
 
-// import the component
+// import vuex mutations
+import { mapMutations } from "vuex";
+
+// import tree component
 import Treeselect from "vue3-treeselect";
+
 // import the styles
 import "vue3-treeselect/dist/vue3-treeselect.css";
 
@@ -379,11 +383,7 @@ export default {
   },
 
   methods: {
-    // Message
-    newMessage(text, variant) {
-      /* FYI variant: // primary // info // warning // danger*/
-      this.message.push([text, variant]);
-    },
+    ...mapMutations({ newMessage: "messenger/newMessage" }),
 
     // Exports
     downloadMappingExport(txtContent, fileExtension) {
@@ -905,7 +905,10 @@ export default {
     // Load
     loadOntology(event, position) /**/ {
       console.group("loadOntology", position);
-      this.newMessage("Loading data", "primary");
+
+      let message = { content: "Loading data", kind: "primary" };
+      this.newMessage(message);
+
       // Reset the widget
       this.resetArrows();
 
@@ -916,8 +919,6 @@ export default {
 
       // Load local files
       for (let file of event.target.files) {
-        this.newMessage("Loading local files", "primary");
-
         let fileExtension = file.name.split(".").slice(-1)[0].toLowerCase();
 
         let reader = new FileReader();

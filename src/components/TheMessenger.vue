@@ -33,28 +33,11 @@ this.newMessage(message); */
 <script>
 export default {
   name: "TheMessenger",
-  props: ["newMessage"],
-  emit: ["resetMessage"],
-  data() {
-    return { messages: [], id: 0 };
-  },
 
-  watch: {
-    newMessage: {
-      handler(messages) {
-        if (messages.length > 0) {
-          for (var message of messages) {
-            this.id++;
-            this.messages.push({
-              content: message[0],
-              severity: message[1],
-              id: this.id,
-            });
-          }
-          this.$emit("resetMessage");
-        }
-      },
-      deep: true,
+  computed: {
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+    messages() {
+      return this.$store.getters["messenger/getMessages"];
     },
   },
 };
