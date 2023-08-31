@@ -26,7 +26,7 @@
       <div class="notification">
         <div class="columns">
           <div class="column is-one" />
-          <div class="column is-10"><table id="mapppingtableCSV" /></div>
+          <div class="column is-10"><table id="mapppingtable" /></div>
           <div class="column is-one" />
         </div>
       </div>
@@ -154,7 +154,7 @@ export default {
       // console.log("this.mappingtable", this.mappingtable);
 
       for (var idxSource in this.mappingtable) {
-        console.log("idxSource", idxSource);
+        // console.log("idxSource", idxSource);
         for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
           currentState.push({
             relation: this.mappingtable[idxSource][idxTarget]["relation"]
@@ -231,7 +231,7 @@ export default {
     console.log("mount mappingtable");
 
     window.mappingDataTable = new AppendGrid({
-      element: document.getElementById("mapppingtableCSV"),
+      element: document.getElementById("mapppingtable"),
       initRows: 0,
       uiFramework: "bulma",
       iconFramework: "default",
@@ -263,6 +263,8 @@ export default {
           newData.fileExtension === "sssom"
         ) {
           this.loadRDF(newData.result);
+        } else {
+          // TODO: create a warning message
         }
       },
       deep: true,

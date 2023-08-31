@@ -3,113 +3,79 @@
 
   <!-- mappping table, CSV, RDF projection -->
   <TheMappingtable :externalMappingTable="mappingtable" />
-  <section class="box">
-    <o-collapse
-      :open="true"
-      aria-id="mappingTableUI_ID"
-      @open="openCloseTableView = true"
-      @close="openCloseTableView = false"
-    >
-      <template #trigger>
-        <div class="has-text-centered">
-          <div
-            class="has-text-centered"
-            style="margin-top: 1em; font-size: 2em"
-          >
-            THE OLD Mapping Editor&nbsp;<o-button
-              variant="primary"
-              aria-controls="mappingTableUI_ID"
-              iconPack="fa"
-              :iconLeft="openCloseTableView ? 'arrow-up' : 'arrow-down'"
-            >
-            </o-button>
-          </div>
-        </div>
-        <br />
-      </template>
-      <div class="notification">
-        <div class="columns">
-          <div class="column is-one" />
-          <div class="column is-10"><table id="mapppingtableCSV" /></div>
-          <div class="column is-one" />
-        </div>
-      </div>
 
-      <!-- Buttons "Load" ... "Download CSV" -->
-      <div class="columns has-text-centered">
-        <div class="column is-1" />
+  <!-- Buttons for mapings (choose, show and export) 
+  TODO: an own component or inline? -->
+  <div class="columns has-text-centered">
+    <div class="column is-1" />
 
-        <div class="column is-2">
-          <div
-            class="file is-primary is-centered"
-            :class="{ 'has-name': hasMappingFileName }"
-          >
-            <label class="file-label">
-              <input
-                class="file-input"
-                type="file"
-                accept=""
-                name="resume"
-                @change="loadMappingTable"
-              />
-              <span class="file-cta">
-                <span class="file-icon">
-                  <i class="fa fa-upload"></i>
-                </span>
-                <span class="file-label">Choose a mapping file...</span>
-              </span>
-              <span class="file-name" v-if="hasMappingFileName"
-                >{{ mappingtableFilename }}
-              </span>
-            </label>
-          </div>
-        </div>
-
-        <div class="column" />
-
-        <div class="column is-2">
-          <o-button
-            :label="'Show all mappings'"
-            @click="showAllArrowsFromMappingtable()"
-            :variant="'primary'"
+    <div class="column is-2">
+      <div
+        class="file is-primary is-centered"
+        :class="{ 'has-name': hasMappingFileName }"
+      >
+        <label class="file-label">
+          <input
+            class="file-input"
+            type="file"
+            accept=""
+            name="resume"
+            @change="loadMappingTable"
           />
-        </div>
-        <div class="column" />
-
-        <div class="column is-2">
-          <o-dropdown
-            aria-role="list"
-            v-model="dropdownExportFormatItem"
-            @update:modelValue="showSecondStep"
-          >
-            <template #trigger="{ active }">
-              <o-button variant="primary">
-                <span>{{
-                  dropdownExportFormat[dropdownExportFormatItem]
-                }}</span>
-
-                <o-icon
-                  pack="fa"
-                  :icon="active ? 'chevron-down' : 'chevron-up'"
-                ></o-icon>
-              </o-button>
-            </template>
-
-            <o-dropdown-item
-              v-for="(item, key) in dropdownExportFormat"
-              :key="key"
-              :value="key"
-              aria-role="listitem"
-            >
-              {{ dropdownExportFormat[key] }}</o-dropdown-item
-            >
-          </o-dropdown>
-        </div>
-
-        <div class="column is-1" />
+          <span class="file-cta">
+            <span class="file-icon">
+              <i class="fa fa-upload"></i>
+            </span>
+            <span class="file-label">Choose a mapping file...</span>
+          </span>
+          <span class="file-name" v-if="hasMappingFileName"
+            >{{ mappingtableFilename }}
+          </span>
+        </label>
       </div>
-    </o-collapse>
-  </section>
+    </div>
+
+    <div class="column" />
+
+    <div class="column is-2">
+      <o-button
+        :label="'Show all mappings'"
+        @click="showAllArrowsFromMappingtable()"
+        :variant="'primary'"
+      />
+    </div>
+    <div class="column" />
+
+    <div class="column is-2">
+      <o-dropdown
+        aria-role="list"
+        v-model="dropdownExportFormatItem"
+        @update:modelValue="showSecondStep"
+      >
+        <template #trigger="{ active }">
+          <o-button variant="primary">
+            <span>{{ dropdownExportFormat[dropdownExportFormatItem] }}</span>
+
+            <o-icon
+              pack="fa"
+              :icon="active ? 'chevron-down' : 'chevron-up'"
+            ></o-icon>
+          </o-button>
+        </template>
+
+        <o-dropdown-item
+          v-for="(item, key) in dropdownExportFormat"
+          :key="key"
+          :value="key"
+          aria-role="listitem"
+        >
+          {{ dropdownExportFormat[key] }}</o-dropdown-item
+        >
+      </o-dropdown>
+    </div>
+
+    <div class="column is-1" />
+  </div>
 
   <!-- Debug -->
   <!-- this.test.queueCount: {{ test.queueCount }} -->
@@ -119,6 +85,7 @@
   <!-- <br />
   <hr /> -->
   <!-- Debug END -->
+
   <div class="block">
     <!-- TODO: Component mapping table control? -->
     <div class="has-text-centered" @resize="selectValue">
@@ -307,10 +274,6 @@ import "vue3-treeselect/dist/vue3-treeselect.css";
 // Arrows
 import LeaderLine from "leader-line-new";
 
-// Mapping table
-// TODO: remove after split
-import AppendGrid from "jquery.appendgrid";
-
 // RDF
 import rdfParser from "rdf-parse";
 import rdf from "@rdfjs/data-model";
@@ -348,103 +311,9 @@ export default {
       message: [], //Format: ["text", "kind"]
 
       // TODO: remove after split
-      openCloseTableView: true, // false: closed, true: open
       openCloseSecondStepView: false, // false: closed, true: open
 
-      // TODO: remove after split
-      mappingDataTableConfig: [
-        {
-          name: "relation",
-          display: "Relation",
-          type: "select",
-
-          ctrlOptions: [
-            "skos:closeMatch",
-            "skos:exactMatch",
-            "skos:broadMatch",
-            "skos:narrowMatch",
-            "skos:relatedMatch",
-          ],
-          events: {
-            change: (e, that = this) => {
-              that.updateMapping(e.uniqueIndex, "relation");
-            },
-          },
-        },
-
-        {
-          name: "sourceTitle",
-          display: "Source title",
-          type: "readonly",
-          events: {
-            click: (e, that = this) => {
-              that.showArrowFromMappingtable(e.uniqueIndex);
-            },
-          },
-        },
-        {
-          name: "sourceLink",
-          display: "Source link",
-          type: "readonly",
-          events: {
-            click: (e, that = this) => {
-              that.showArrowFromMappingtable(e.uniqueIndex);
-            },
-          },
-        },
-        {
-          name: "targetTitle",
-          display: "Target title",
-          type: "readonly",
-          events: {
-            click: (e, that = this) => {
-              that.showArrowFromMappingtable(e.uniqueIndex);
-            },
-          },
-        },
-        {
-          name: "targetLink",
-          display: "Target link",
-          type: "readonly",
-          events: {
-            click: (e, that = this) => {
-              that.showArrowFromMappingtable(e.uniqueIndex);
-            },
-          },
-        },
-
-        {
-          name: "confidence",
-          display: "confidence (sssom)",
-          type: "text",
-        },
-
-        {
-          name: "review",
-          display: "Review (sssom)",
-          type: "checkbox",
-          cellClass: "has-text-centered",
-        },
-        {
-          name: "comment",
-          display: "Comment",
-          type: "text",
-          events: {
-            click: (e, that = this) => {
-              that.showArrowFromMappingtable(e.uniqueIndex);
-            },
-            change: (e, that = this) => {
-              that.updateMapping(e.uniqueIndex, "comment");
-            },
-          },
-        },
-      ],
-
-      // TODO: remove mappingtable part after split
-      mappingtableFilename: "",
-      mappingtableExtension: "", // csv, rdf/xml or ttl, if available
-      mappingtableOrig: "", // Loaded data from the file, if you need to reset
-      mappingtable: [], // Definition look at loadMappingTable(). For the UI take mappingtableUI!
+      mappingtable: {}, //  {result, fileExtension}
 
       sourceFilename: "",
       targetFilename: "",
@@ -1311,51 +1180,9 @@ export default {
           fileExtension: fileExtension,
         };
 
-        // this.mappingtable = [];
-        // this.mappingtableOrig = e.target.result;
-        // this.mappingtableExtension = fileExtension;
-
-        /*
-         Format mapping compare structure
-         {
-          "source link":{
-            "target link":{
-              "sourceTitle","targetTitle", "relation", "comment"
-            }
-          }
-         }
-         */
-
         // CSV
         if (this.mappingtableExtension === "csv") {
-          /*
-          Format mapping CSV:
-          0 relation
-          1 source title
-          2 source link
-          3 target title
-          4 target link
-          5 comment
-
-          Target: Format mapping compare structure
-          */
-          // var mappingtableRows = e.target.result.split("\n");
-          // mappingtableRows.pop();
-          // console.log("mappingtableRows", mappingtableRows);
-          // for (var cell of mappingtableRows) {
-          //   var cellInRow = cell.split(",");
-          //   if (this.mappingtable[cellInRow[2]] == undefined) {
-          //     this.mappingtable[cellInRow[2]] = {};
-          //   }
-          //   this.mappingtable[cellInRow[2]][cellInRow[4]] = {
-          //     sourceTitle: cellInRow[1],
-          //     targetTitle: cellInRow[3],
-          //     relation: cellInRow[0],
-          //     comment: cellInRow[5],
-          //   };
-          // }
-          // this.mappingtableFilename = file.name;
-          // this.refreshMappingtableUI();
+          //
         }
 
         // RDF(XML)
@@ -1416,13 +1243,6 @@ export default {
           //   this.mappingtableFilename = file.name;
           //   this.refreshMappingtableUI();
           // });
-        }
-
-        // Wrong file extension
-        else {
-          // TODO: Warnings
-          this.mappingtableOrig = "";
-          this.mappingtableExtension = "";
         }
       };
 
