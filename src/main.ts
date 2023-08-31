@@ -33,13 +33,13 @@ import "@oruga-ui/theme-bulma/dist/bulma.css";
 // Own Plugins
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import Keycloak from "./plugins/keycloak.js";
+// import Keycloak from "./plugins/keycloak.js";
 
 createApp(App)
   .use(Oruga, bulmaConfig)
   .use(Router)
   .use(Store)
-  .use(Keycloak)
+  // .use(Keycloak)
 
   // .component('font-awesome-icon', FontAwesomeIcon)
   .mount("#app");
