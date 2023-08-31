@@ -37,6 +37,14 @@
 <script setup>
 // Mapping table
 import AppendGrid from "jquery.appendgrid";
+
+// RDF
+import rdfParser from "rdf-parse";
+
+// Quadstore & Co
+import { Engine } from "quadstore-comunica";
+import { storeStream } from "rdf-store-stream";
+import { query } from "@/components/query";
 </script>
 
 <script>
@@ -46,9 +54,14 @@ export default {
   emit: [],
   data() {
     return {
+      query: query, // external stored queries for a better readability
+
       openCloseTableView: true, // false: closed, true: open
 
       mappingtable: [],
+
+      rdfObj_engines_mapping: {},
+
       mappingDataTableConfig: [
         {
           name: "relation",
@@ -222,8 +235,68 @@ export default {
       this.refreshMappingtableUI();
     },
 
-    loadRDF(data) {
-      console.log("load RDF");
+    async loadRDF(data) {
+      console.log("RDF (XML, TTL or SSSOM) selected");
+
+      var mimeType = "";
+
+      if (data.fileExtension == "ttl" || data.fileExtension == "sssom") {
+        // TODO: take care about sssom
+        mimeType = "text/turtle";
+      }
+      // RDF/XML
+      else if (data.fileExtension == "rdf" || data.fileExtension == "xml") {
+        mimeType = "application/rdf+xml";
+      }
+
+      // Reader definition
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const ontologyStream = require("streamify-string")(data.result);
+
+      const quadStream = rdfParser.parse(ontologyStream, {
+        contentType: mimeType,
+        baseIRI: "http://example.org",
+      });
+
+      const store = await storeStream(quadStream);
+      this.rdfObj_engines_mapping = new Engine(store);
+
+      var bindingsStream = await this.rdfObj_engines_mapping.queryBindings(
+        this.query.testQuery
+      );
+      // ].queryBindings(this.query.mappingRow);
+
+      bindingsStream.on("data", (bindings) => {
+        // console.log("bindings", bindings);
+        // console.log(
+        //   "bindings.entries.hashmap.node",
+        //   bindings.entries.hashmap.node
+        // );
+
+        if (
+          this.mappingtable[
+            bindings.entries.hashmap.node.children[0].value.value
+          ] == undefined
+        ) {
+          this.mappingtable[
+            bindings.entries.hashmap.node.children[0].value.value
+          ] = {};
+        }
+        this.mappingtable[
+          bindings.entries.hashmap.node.children[0].value.value
+        ][bindings.entries.hashmap.node.children[1].value.value] = {
+          sourceTitle: "Enter a title for the CSV export here",
+          targetTitle: "Enter a title for the CSV export here",
+          relation: bindings.entries.hashmap.node.children[2].value.value,
+          comment: "Enter a comment for the CSV export here",
+        };
+      });
+
+      bindingsStream.on("end", () => {
+        console.log("this.mappingtable", this.mappingtable);
+
+        this.refreshMappingtableUI();
+      });
     },
   },
 
@@ -254,7 +327,7 @@ export default {
   watch: {
     externalMappingTable: {
       handler(newData) {
-        if (newData.fileExtension == "csv") {
+        if (newData.fileExtension === "csv") {
           this.loadCSV(newData.result);
         } else if (
           newData.fileExtension === "rdf" ||
@@ -262,7 +335,7 @@ export default {
           newData.fileExtension === "ttl" ||
           newData.fileExtension === "sssom"
         ) {
-          this.loadRDF(newData.result);
+          this.loadRDF(newData);
         } else {
           // TODO: create a warning message
         }

@@ -1192,7 +1192,7 @@ export default {
           this.mappingtableExtension === "ttl" ||
           this.mappingtableExtension === "sssom"
         ) {
-          console.log("RDF or TTL selected");
+          console.log("RDF (XML, TTL or SSSOM) selected");
 
           // Reader definition
           // eslint-disable-next-line @typescript-eslint/no-var-requires
