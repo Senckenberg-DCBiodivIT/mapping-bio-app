@@ -6,7 +6,6 @@
 </template>
 
 <script setup lang="ts">
-// import Footer from "./components/TheFooter.vue";
 import Header from "./components/TheHeader.vue";
 </script>
 
