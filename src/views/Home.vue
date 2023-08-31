@@ -1,8 +1,8 @@
 <template>
   <TheMessenger :newMessage="message" @resetMessage="message = []" />
-  <!-- TODO: mappingTable as an own component with an store segment? -->
 
   <!-- mappping table, CSV, RDF projection -->
+  <TheMappingtable :externalMappingTable="mappingtable" />
   <section class="box">
     <o-collapse
       :open="true"
@@ -16,7 +16,7 @@
             class="has-text-centered"
             style="margin-top: 1em; font-size: 2em"
           >
-            Mapping Editor&nbsp;<o-button
+            THE OLD Mapping Editor&nbsp;<o-button
               variant="primary"
               aria-controls="mappingTableUI_ID"
               iconPack="fa"
@@ -295,8 +295,9 @@
 </template>
 
 <script setup>
-// Messanger
+// Own components
 import TheMessenger from "@/components/TheMessenger";
+import TheMappingtable from "@/components/TheMappingtable";
 
 // import the component
 import Treeselect from "vue3-treeselect";
@@ -307,6 +308,7 @@ import "vue3-treeselect/dist/vue3-treeselect.css";
 import LeaderLine from "leader-line-new";
 
 // Mapping table
+// TODO: remove after split
 import AppendGrid from "jquery.appendgrid";
 
 // RDF
@@ -345,9 +347,11 @@ export default {
 
       message: [], //Format: ["text", "kind"]
 
+      // TODO: remove after split
       openCloseTableView: true, // false: closed, true: open
       openCloseSecondStepView: false, // false: closed, true: open
 
+      // TODO: remove after split
       mappingDataTableConfig: [
         {
           name: "relation",
@@ -436,10 +440,10 @@ export default {
         },
       ],
 
+      // TODO: remove mappingtable part after split
       mappingtableFilename: "",
       mappingtableExtension: "", // csv, rdf/xml or ttl, if available
       mappingtableOrig: "", // Loaded data from the file, if you need to reset
-
       mappingtable: [], // Definition look at loadMappingTable(). For the UI take mappingtableUI!
 
       sourceFilename: "",
@@ -1203,6 +1207,7 @@ export default {
 
       console.groupEnd();
     },
+
     async testFKT() {
       return "ack";
     },
@@ -1284,9 +1289,10 @@ export default {
       // return null; // null if no one child or [children...]
     },
 
+    // TODO: Reduce after split
     loadMappingTable(event) {
       /*
-          Here you can load a mapping table as a CSV, RDF(XML) or turtle file
+          Here you can load a mapping table as a CSV, RDF(XML) or a turtle file
       */
       console.group("loadMappingTable, event:", event);
 
@@ -1300,9 +1306,14 @@ export default {
       let mimeType = "";
 
       reader.onload = async (e) => {
-        this.mappingtable = [];
-        this.mappingtableOrig = e.target.result;
-        this.mappingtableExtension = fileExtension;
+        this.mappingtable = {
+          result: e.target.result,
+          fileExtension: fileExtension,
+        };
+
+        // this.mappingtable = [];
+        // this.mappingtableOrig = e.target.result;
+        // this.mappingtableExtension = fileExtension;
 
         /*
          Format mapping compare structure
@@ -1328,25 +1339,23 @@ export default {
 
           Target: Format mapping compare structure
           */
-
-          var mappingtableRows = e.target.result.split("\n");
-          mappingtableRows.pop();
-          console.log("mappingtableRows", mappingtableRows);
-
-          for (var cell of mappingtableRows) {
-            var cellInRow = cell.split(",");
-            if (this.mappingtable[cellInRow[2]] == undefined) {
-              this.mappingtable[cellInRow[2]] = {};
-            }
-            this.mappingtable[cellInRow[2]][cellInRow[4]] = {
-              sourceTitle: cellInRow[1],
-              targetTitle: cellInRow[3],
-              relation: cellInRow[0],
-              comment: cellInRow[5],
-            };
-          }
-          this.mappingtableFilename = file.name;
-          this.refreshMappingtableUI();
+          // var mappingtableRows = e.target.result.split("\n");
+          // mappingtableRows.pop();
+          // console.log("mappingtableRows", mappingtableRows);
+          // for (var cell of mappingtableRows) {
+          //   var cellInRow = cell.split(",");
+          //   if (this.mappingtable[cellInRow[2]] == undefined) {
+          //     this.mappingtable[cellInRow[2]] = {};
+          //   }
+          //   this.mappingtable[cellInRow[2]][cellInRow[4]] = {
+          //     sourceTitle: cellInRow[1],
+          //     targetTitle: cellInRow[3],
+          //     relation: cellInRow[0],
+          //     comment: cellInRow[5],
+          //   };
+          // }
+          // this.mappingtableFilename = file.name;
+          // this.refreshMappingtableUI();
         }
 
         // RDF(XML)
@@ -1382,33 +1391,31 @@ export default {
             //   bindings.entries.hashmap.node
             // );
 
-            if (
-              this.mappingtable[
-                bindings.entries.hashmap.node.children[0].value.value
-              ] == undefined
-            ) {
-              this.mappingtable[
-                bindings.entries.hashmap.node.children[0].value.value
-              ] = {};
-            }
-            this.mappingtable[
-              bindings.entries.hashmap.node.children[0].value.value
-            ][bindings.entries.hashmap.node.children[1].value.value] = {
-              sourceTitle: "Enter a title for the CSV export here",
-              targetTitle: "Enter a title for the CSV export here",
-              relation: bindings.entries.hashmap.node.children[2].value.value,
-              // .replace("&lt;", "<")
-              // .replace("&gt;", ">"),
-              comment: "Enter a comment for the CSV export here",
-            };
+            // if (
+            //   this.mappingtable[
+            //     bindings.entries.hashmap.node.children[0].value.value
+            //   ] == undefined
+            // ) {
+            //   this.mappingtable[
+            //     bindings.entries.hashmap.node.children[0].value.value
+            //   ] = {};
+            // }
+            // this.mappingtable[
+            //   bindings.entries.hashmap.node.children[0].value.value
+            // ][bindings.entries.hashmap.node.children[1].value.value] = {
+            //   sourceTitle: "Enter a title for the CSV export here",
+            //   targetTitle: "Enter a title for the CSV export here",
+            //   relation: bindings.entries.hashmap.node.children[2].value.value,
+            //   comment: "Enter a comment for the CSV export here",
+            // };
           });
 
-          bindingsStream.on("end", (bindings) => {
-            console.log("this.mappingtable", this.mappingtable);
+          // bindingsStream.on("end", (bindings) => {
+          //   console.log("this.mappingtable", this.mappingtable);
 
-            this.mappingtableFilename = file.name;
-            this.refreshMappingtableUI();
-          });
+          //   this.mappingtableFilename = file.name;
+          //   this.refreshMappingtableUI();
+          // });
         }
 
         // Wrong file extension
@@ -1524,6 +1531,7 @@ export default {
       console.groupEnd();
     },
 
+    // TODO: remove after split
     refreshMappingtableUI() {
       /*
           Here you can manually refresh the UI state based on the current mapping state like
@@ -1709,7 +1717,7 @@ export default {
     },
   },
 
-  computed: /* OK */ {
+  computed: /* TODO: remove after split */ {
     // Filenames
     hasMappingFileName() {
       return this.mappingtableFilename != "" ? true : false;
@@ -1723,27 +1731,27 @@ export default {
   },
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-  async mounted() /* OK */ {
+  async mounted() /* TODO: remove after split */ {
     console.log("mount");
-    window.mappingDataTable = new AppendGrid({
-      element: document.getElementById("mapppingtableCSV"),
-      initRows: 0,
-      uiFramework: "bulma",
-      iconFramework: "default",
-      hideButtons: {
-        // Hide the move up and move down button on each row
-        moveUp: true,
-        moveDown: true,
-        insert: true,
-        append: true,
-        removeLast: true,
-      },
-      columns: this.mappingDataTableConfig,
-      sectionClasses: {
-        table: "is-narrow is-fullwidth",
-      },
-    });
-    this.refreshMappingtableUI();
+    // window.mappingDataTable = new AppendGrid({
+    //   element: document.getElementById("mapppingtableCSV"),
+    //   initRows: 0,
+    //   uiFramework: "bulma",
+    //   iconFramework: "default",
+    //   hideButtons: {
+    //     // Hide the move up and move down button on each row
+    //     moveUp: true,
+    //     moveDown: true,
+    //     insert: true,
+    //     append: true,
+    //     removeLast: true,
+    //   },
+    //   columns: this.mappingDataTableConfig,
+    //   sectionClasses: {
+    //     table: "is-narrow is-fullwidth",
+    //   },
+    // });
+    // this.refreshMappingtableUI();
 
     // console.log("def tree");
 
