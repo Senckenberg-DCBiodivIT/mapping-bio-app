@@ -12,7 +12,7 @@
             class="has-text-centered"
             style="margin-top: 1em; font-size: 2em"
           >
-            THE NEW Mapping Editor&nbsp;<o-button
+            Mapping Editor&nbsp;<o-button
               variant="primary"
               aria-controls="mappingTableUI_ID"
               iconPack="fa"
@@ -149,9 +149,9 @@ export default {
             - or delete a relation between two ontologies
       */
 
-      console.group("refreshMappingtableUI");
+      // console.group("refreshMappingtableUI");
       var currentState = [];
-      console.log("this.mappingtable", this.mappingtable);
+      // console.log("this.mappingtable", this.mappingtable);
 
       for (var idxSource in this.mappingtable) {
         console.log("idxSource", idxSource);
@@ -169,7 +169,7 @@ export default {
         }
       }
 
-      console.log("currentState", currentState);
+      // console.log("currentState", currentState);
 
       if (currentState.length == 0) {
         window.mappingDataTable.load([[]]);
@@ -178,7 +178,7 @@ export default {
         window.mappingDataTable.load(currentState);
       }
 
-      console.groupEnd();
+      // console.groupEnd();
     },
 
     loadCSV(data) {
@@ -206,7 +206,7 @@ export default {
 
       var mappingtableRows = data.split("\n");
       mappingtableRows.pop();
-      console.log("mappingtableRows", mappingtableRows);
+      // console.log("mappingtableRows", mappingtableRows);
       for (var cell of mappingtableRows) {
         var cellInRow = cell.split(",");
         if (this.mappingtable[cellInRow[2]] == undefined) {
@@ -219,7 +219,6 @@ export default {
           comment: cellInRow[5],
         };
       }
-      // this.mappingtableFilename = file.name;
       this.refreshMappingtableUI();
     },
 
@@ -237,7 +236,7 @@ export default {
       uiFramework: "bulma",
       iconFramework: "default",
       hideButtons: {
-        // Hide the move up and move down button on each row
+        // Hide some buttons on each row
         moveUp: true,
         moveDown: true,
         insert: true,
