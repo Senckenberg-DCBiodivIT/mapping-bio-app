@@ -1,115 +1,84 @@
 <template>
   <TheMessenger :newMessage="message" @resetMessage="message = []" />
-  <!-- TODO: mappingTable as an own component with an store segment? -->
 
   <!-- mappping table, CSV, RDF projection -->
-  <section class="box">
-    <o-collapse
-      :open="true"
-      aria-id="mappingTableUI_ID"
-      @open="openCloseTableView = true"
-      @close="openCloseTableView = false"
-    >
-      <template #trigger>
-        <div class="has-text-centered">
-          <div
-            class="has-text-centered"
-            style="margin-top: 1em; font-size: 2em"
-          >
-            Mapping Editor&nbsp;<o-button
-              variant="primary"
-              aria-controls="mappingTableUI_ID"
-              iconPack="fa"
-              :iconLeft="openCloseTableView ? 'arrow-up' : 'arrow-down'"
-            >
-            </o-button>
-          </div>
-        </div>
-        <br />
-      </template>
-      <div class="notification">
-        <div class="columns">
-          <div class="column is-one" />
-          <div class="column is-10"><table id="mapppingtableCSV" /></div>
-          <div class="column is-one" />
-        </div>
-      </div>
+  <TheMappingtable
+    :externalMappingTable="mappingfile"
+    @ackNewMapping="newMappingRow = []"
+  />
 
-      <!-- Buttons "Load" ... "Download CSV" -->
-      <div class="columns has-text-centered">
-        <div class="column is-1" />
+  <!-- Buttons for mapings (choose, show and export) 
+  TODO: an own component or inline? -->
+  <div class="columns has-text-centered">
+    <div class="column is-1" />
 
-        <div class="column is-2">
-          <div
-            class="file is-primary is-centered"
-            :class="{ 'has-name': hasMappingFileName }"
-          >
-            <label class="file-label">
-              <input
-                class="file-input"
-                type="file"
-                accept=""
-                name="resume"
-                @change="loadMappingTable"
-              />
-              <span class="file-cta">
-                <span class="file-icon">
-                  <i class="fa fa-upload"></i>
-                </span>
-                <span class="file-label">Choose a mapping file...</span>
-              </span>
-              <span class="file-name" v-if="hasMappingFileName"
-                >{{ mappingtableFilename }}
-              </span>
-            </label>
-          </div>
-        </div>
-
-        <div class="column" />
-
-        <div class="column is-2">
-          <o-button
-            :label="'Show all mappings'"
-            @click="showAllArrowsFromMappingtable()"
-            :variant="'primary'"
+    <div class="column is-2">
+      <div
+        class="file is-primary is-centered"
+        :class="{ 'has-name': hasMappingFileName }"
+      >
+        <label class="file-label">
+          <input
+            class="file-input"
+            type="file"
+            accept=""
+            name="resume"
+            @change="loadMappingTable"
           />
-        </div>
-        <div class="column" />
-
-        <div class="column is-2">
-          <o-dropdown
-            aria-role="list"
-            v-model="dropdownExportFormatItem"
-            @update:modelValue="showSecondStep"
-          >
-            <template #trigger="{ active }">
-              <o-button variant="primary">
-                <span>{{
-                  dropdownExportFormat[dropdownExportFormatItem]
-                }}</span>
-
-                <o-icon
-                  pack="fa"
-                  :icon="active ? 'chevron-down' : 'chevron-up'"
-                ></o-icon>
-              </o-button>
-            </template>
-
-            <o-dropdown-item
-              v-for="(item, key) in dropdownExportFormat"
-              :key="key"
-              :value="key"
-              aria-role="listitem"
-            >
-              {{ dropdownExportFormat[key] }}</o-dropdown-item
-            >
-          </o-dropdown>
-        </div>
-
-        <div class="column is-1" />
+          <span class="file-cta">
+            <span class="file-icon">
+              <i class="fa fa-upload"></i>
+            </span>
+            <span class="file-label">Choose a mapping file...</span>
+          </span>
+          <span class="file-name" v-if="hasMappingFileName"
+            >{{ mappingtableFilename }}
+          </span>
+        </label>
       </div>
-    </o-collapse>
-  </section>
+    </div>
+
+    <div class="column" />
+
+    <div class="column is-2">
+      <o-button
+        :label="'Show all mappings'"
+        @click="showAllArrowsFromMappingtable()"
+        :variant="'primary'"
+      />
+    </div>
+    <div class="column" />
+
+    <div class="column is-2">
+      <o-dropdown
+        aria-role="list"
+        v-model="dropdownExportFormatItem"
+        @update:modelValue="showSecondStep"
+      >
+        <template #trigger="{ active }">
+          <o-button variant="primary">
+            <span>{{ dropdownExportFormat[dropdownExportFormatItem] }}</span>
+
+            <o-icon
+              pack="fa"
+              :icon="active ? 'chevron-down' : 'chevron-up'"
+            ></o-icon>
+          </o-button>
+        </template>
+
+        <o-dropdown-item
+          v-for="(item, key) in dropdownExportFormat"
+          :key="key"
+          :value="key"
+          aria-role="listitem"
+        >
+          {{ dropdownExportFormat[key] }}</o-dropdown-item
+        >
+      </o-dropdown>
+    </div>
+
+    <div class="column is-1" />
+  </div>
 
   <!-- Debug -->
   <!-- this.test.queueCount: {{ test.queueCount }} -->
@@ -119,6 +88,7 @@
   <!-- <br />
   <hr /> -->
   <!-- Debug END -->
+
   <div class="block">
     <!-- TODO: Component mapping table control? -->
     <div class="has-text-centered" @resize="selectValue">
@@ -295,8 +265,9 @@
 </template>
 
 <script setup>
-// Messanger
+// Own components
 import TheMessenger from "@/components/TheMessenger";
+import TheMappingtable from "@/components/TheMappingtable";
 
 // import the component
 import Treeselect from "vue3-treeselect";
@@ -305,9 +276,6 @@ import "vue3-treeselect/dist/vue3-treeselect.css";
 
 // Arrows
 import LeaderLine from "leader-line-new";
-
-// Mapping table
-import AppendGrid from "jquery.appendgrid";
 
 // RDF
 import rdfParser from "rdf-parse";
@@ -345,102 +313,12 @@ export default {
 
       message: [], //Format: ["text", "kind"]
 
-      openCloseTableView: true, // false: closed, true: open
+      // TODO: remove after split
       openCloseSecondStepView: false, // false: closed, true: open
 
-      mappingDataTableConfig: [
-        {
-          name: "relation",
-          display: "Relation",
-          type: "select",
-
-          ctrlOptions: [
-            "skos:closeMatch",
-            "skos:exactMatch",
-            "skos:broadMatch",
-            "skos:narrowMatch",
-            "skos:relatedMatch",
-          ],
-          events: {
-            change: (e, that = this) => {
-              that.updateMapping(e.uniqueIndex, "relation");
-            },
-          },
-        },
-
-        {
-          name: "sourceTitle",
-          display: "Source title",
-          type: "readonly",
-          events: {
-            click: (e, that = this) => {
-              that.showArrowFromMappingtable(e.uniqueIndex);
-            },
-          },
-        },
-        {
-          name: "sourceLink",
-          display: "Source link",
-          type: "readonly",
-          events: {
-            click: (e, that = this) => {
-              that.showArrowFromMappingtable(e.uniqueIndex);
-            },
-          },
-        },
-        {
-          name: "targetTitle",
-          display: "Target title",
-          type: "readonly",
-          events: {
-            click: (e, that = this) => {
-              that.showArrowFromMappingtable(e.uniqueIndex);
-            },
-          },
-        },
-        {
-          name: "targetLink",
-          display: "Target link",
-          type: "readonly",
-          events: {
-            click: (e, that = this) => {
-              that.showArrowFromMappingtable(e.uniqueIndex);
-            },
-          },
-        },
-
-        {
-          name: "confidence",
-          display: "confidence (sssom)",
-          type: "text",
-        },
-
-        {
-          name: "review",
-          display: "Review (sssom)",
-          type: "checkbox",
-          cellClass: "has-text-centered",
-        },
-        {
-          name: "comment",
-          display: "Comment",
-          type: "text",
-          events: {
-            click: (e, that = this) => {
-              that.showArrowFromMappingtable(e.uniqueIndex);
-            },
-            change: (e, that = this) => {
-              that.updateMapping(e.uniqueIndex, "comment");
-            },
-          },
-        },
-      ],
-
-      mappingtableFilename: "",
-      mappingtableExtension: "", // csv, rdf/xml or ttl, if available
-      mappingtableOrig: "", // Loaded data from the file, if you need to reset
-
-      mappingtable: [], // Definition look at loadMappingTable(). For the UI take mappingtableUI!
+      mappingtable: [],
+      mappingfile: {}, //  {result, fileExtension}
+      newMappingRow: [],
 
       sourceFilename: "",
       targetFilename: "",
@@ -1203,6 +1081,7 @@ export default {
 
       console.groupEnd();
     },
+
     async testFKT() {
       return "ack";
     },
@@ -1284,9 +1163,10 @@ export default {
       // return null; // null if no one child or [children...]
     },
 
+    // TODO: Reduce after split
     loadMappingTable(event) {
       /*
-          Here you can load a mapping table as a CSV, RDF(XML) or turtle file
+          Here you can load a mapping table as a CSV, RDF(XML) or a turtle file
       */
       console.group("loadMappingTable, event:", event);
 
@@ -1297,56 +1177,16 @@ export default {
         .toLowerCase();
 
       let reader = new FileReader();
-      let mimeType = "";
 
       reader.onload = async (e) => {
-        this.mappingtable = [];
-        this.mappingtableOrig = e.target.result;
-        this.mappingtableExtension = fileExtension;
-
-        /*
-         Format mapping compare structure
-         {
-          "source link":{
-            "target link":{
-              "sourceTitle","targetTitle", "relation", "comment"
-            }
-          }
-         }
-         */
+        this.mappingfile = {
+          result: e.target.result,
+          fileExtension: fileExtension,
+        };
 
         // CSV
         if (this.mappingtableExtension === "csv") {
-          /*
-          Format mapping CSV:
-          0 relation
-          1 source title
-          2 source link
-          3 target title
-          4 target link
-          5 comment
-
-          Target: Format mapping compare structure
-          */
-
-          var mappingtableRows = e.target.result.split("\n");
-          mappingtableRows.pop();
-          console.log("mappingtableRows", mappingtableRows);
-
-          for (var cell of mappingtableRows) {
-            var cellInRow = cell.split(",");
-            if (this.mappingtable[cellInRow[2]] == undefined) {
-              this.mappingtable[cellInRow[2]] = {};
-            }
-            this.mappingtable[cellInRow[2]][cellInRow[4]] = {
-              sourceTitle: cellInRow[1],
-              targetTitle: cellInRow[3],
-              relation: cellInRow[0],
-              comment: cellInRow[5],
-            };
-          }
-          this.mappingtableFilename = file.name;
-          this.refreshMappingtableUI();
+          //
         }
 
         // RDF(XML)
@@ -1356,92 +1196,14 @@ export default {
           this.mappingtableExtension === "ttl" ||
           this.mappingtableExtension === "sssom"
         ) {
-          console.log("RDF or TTL selected");
-
-          // Reader definition
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const ontologyStream = require("streamify-string")(e.target.result);
-
-          const quadStream = rdfParser.parse(ontologyStream, {
-            contentType: mimeType,
-            baseIRI: "http://example.org",
-          });
-
-          const store = await storeStream(quadStream);
-          this.rdfObj.engines["mapping"] = new Engine(store);
-
-          var bindingsStream = await this.rdfObj.engines[
-            "mapping"
-          ].queryBindings(this.query.testQuery);
-          // ].queryBindings(this.query.mappingRow);
-
-          bindingsStream.on("data", (bindings) => {
-            console.log("bindings", bindings);
-            // console.log(
-            //   "bindings.entries.hashmap.node",
-            //   bindings.entries.hashmap.node
-            // );
-
-            if (
-              this.mappingtable[
-                bindings.entries.hashmap.node.children[0].value.value
-              ] == undefined
-            ) {
-              this.mappingtable[
-                bindings.entries.hashmap.node.children[0].value.value
-              ] = {};
-            }
-            this.mappingtable[
-              bindings.entries.hashmap.node.children[0].value.value
-            ][bindings.entries.hashmap.node.children[1].value.value] = {
-              sourceTitle: "Enter a title for the CSV export here",
-              targetTitle: "Enter a title for the CSV export here",
-              relation: bindings.entries.hashmap.node.children[2].value.value,
-              // .replace("&lt;", "<")
-              // .replace("&gt;", ">"),
-              comment: "Enter a comment for the CSV export here",
-            };
-          });
-
-          bindingsStream.on("end", (bindings) => {
-            console.log("this.mappingtable", this.mappingtable);
-
-            this.mappingtableFilename = file.name;
-            this.refreshMappingtableUI();
-          });
-        }
-
-        // Wrong file extension
-        else {
-          // TODO: Warnings
-          this.mappingtableOrig = "";
-          this.mappingtableExtension = "";
+          //
+        } else {
+          // TODO: Error
         }
       };
 
       // Read file
-      // TTL
-      if (fileExtension == "csv") {
-        mimeType = "";
-        reader.readAsText(file);
-      }
-      // TTL
-      else if (fileExtension == "ttl" || fileExtension == "sssom") {
-        // TODO: take care about sssom
-        mimeType = "text/turtle";
-        reader.readAsText(file);
-      }
-      // RDF/XML
-      else if (fileExtension == "rdf" || fileExtension == "xml") {
-        mimeType = "application/rdf+xml";
-        reader.readAsText(file);
-      }
-      // ERROR
-      else {
-        // ERROR;
-      }
-
-      // reader.readAsText(file);
+      reader.readAsText(file);
 
       console.groupEnd();
     },
@@ -1481,7 +1243,7 @@ export default {
             };
           }
         }
-        this.refreshMappingtableUI();
+        // this.refreshMappingtableUI();
         this.resetArrows();
       }
 
@@ -1493,37 +1255,38 @@ export default {
       console.groupEnd();
     },
 
-    updateMapping(id, param) {
-      /*
-      Here you can update the mapping table data after a change in the UI
-      like "relation" or "comment"
-      */
+    // updateMapping(id, param) {
+    //   /*
+    //   Here you can update the mapping table data after a change in the UI
+    //   like "relation" or "comment"
+    //   */
 
-      id--; // Table-widget counts from 1 to n
+    //   id--; // Table-widget counts from 1 to n
 
-      console.group("updateMapping", id, param);
+    //   console.group("updateMapping", id, param);
 
-      // Get updated value
-      var updatedValue = window.mappingDataTable.getCtrlValue(param, id);
-      var mappingtableSourceID = window.mappingDataTable.getCtrlValue(
-        "sourceLink",
-        id
-      );
-      var mappingtableTargetID = window.mappingDataTable.getCtrlValue(
-        "targetLink",
-        id
-      );
+    //   // Get updated value
+    //   var updatedValue = window.mappingDataTable.getCtrlValue(param, id);
+    //   var mappingtableSourceID = window.mappingDataTable.getCtrlValue(
+    //     "sourceLink",
+    //     id
+    //   );
+    //   var mappingtableTargetID = window.mappingDataTable.getCtrlValue(
+    //     "targetLink",
+    //     id
+    //   );
 
-      // Set updated value
-      this.mappingtable[mappingtableSourceID][mappingtableTargetID][param] =
-        updatedValue;
+    //   // Set updated value
+    //   this.mappingtable[mappingtableSourceID][mappingtableTargetID][param] =
+    //     updatedValue;
 
-      // Update the tree view
-      this.showArrowFromMappingtable(id + 1); // This function works with internal table-widget index. Table counts from 1 to n
+    //   // Update the tree view
+    //   this.showArrowFromMappingtable(id + 1); // This function works with internal table-widget index. Table counts from 1 to n
 
-      console.groupEnd();
-    },
+    //   console.groupEnd();
+    // },
 
+    // TODO: remove after split
     refreshMappingtableUI() {
       /*
           Here you can manually refresh the UI state based on the current mapping state like
@@ -1709,7 +1472,7 @@ export default {
     },
   },
 
-  computed: /* OK */ {
+  computed: /* TODO: remove after split */ {
     // Filenames
     hasMappingFileName() {
       return this.mappingtableFilename != "" ? true : false;
@@ -1723,27 +1486,27 @@ export default {
   },
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-  async mounted() /* OK */ {
+  async mounted() /* TODO: remove after split */ {
     console.log("mount");
-    window.mappingDataTable = new AppendGrid({
-      element: document.getElementById("mapppingtableCSV"),
-      initRows: 0,
-      uiFramework: "bulma",
-      iconFramework: "default",
-      hideButtons: {
-        // Hide the move up and move down button on each row
-        moveUp: true,
-        moveDown: true,
-        insert: true,
-        append: true,
-        removeLast: true,
-      },
-      columns: this.mappingDataTableConfig,
-      sectionClasses: {
-        table: "is-narrow is-fullwidth",
-      },
-    });
-    this.refreshMappingtableUI();
+    // window.mappingDataTable = new AppendGrid({
+    //   element: document.getElementById("mapppingtableCSV"),
+    //   initRows: 0,
+    //   uiFramework: "bulma",
+    //   iconFramework: "default",
+    //   hideButtons: {
+    //     // Hide the move up and move down button on each row
+    //     moveUp: true,
+    //     moveDown: true,
+    //     insert: true,
+    //     append: true,
+    //     removeLast: true,
+    //   },
+    //   columns: this.mappingDataTableConfig,
+    //   sectionClasses: {
+    //     table: "is-narrow is-fullwidth",
+    //   },
+    // });
+    // this.refreshMappingtableUI();
 
     // console.log("def tree");
 
