@@ -38,6 +38,9 @@
 // Mapping table
 import AppendGrid from "jquery.appendgrid";
 
+// Store
+import { mapGetters } from "vuex";
+
 // RDF
 import rdfParser from "rdf-parse";
 
@@ -50,8 +53,8 @@ import { query } from "@/components/query";
 <script>
 export default {
   name: "TheMappingtable",
-  props: ["externalMappingTable"],
-  emit: ["ackNewMapping"],
+  props: [""],
+  emit: [""],
   data() {
     return {
       query: query, // external stored queries for a better readability
@@ -150,6 +153,12 @@ export default {
         },
       ],
     };
+  },
+  computed: {
+    ...mapGetters({
+      // file: { fileText: "", fileExtension: "" }
+      getFile: "mappingtable/getFile",
+    }),
   },
   methods: {
     refreshMappingtableUI() {
@@ -280,9 +289,11 @@ export default {
         mimeType = "application/rdf+xml";
       }
 
+      console.log("mimeType", mimeType);
+
       // Reader definition
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const ontologyStream = require("streamify-string")(data.result);
+      const ontologyStream = require("streamify-string")(data.fileText);
 
       const quadStream = rdfParser.parse(ontologyStream, {
         contentType: mimeType,
@@ -356,10 +367,10 @@ export default {
   },
 
   watch: {
-    externalMappingTable: {
+    getFile: {
       handler(newData) {
         if (newData.fileExtension === "csv") {
-          this.loadCSV(newData.result);
+          this.loadCSV(newData.fileText);
         } else if (
           newData.fileExtension === "rdf" ||
           newData.fileExtension === "xml" ||

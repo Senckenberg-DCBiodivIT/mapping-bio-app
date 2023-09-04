@@ -2,10 +2,7 @@
   <TheMessenger />
 
   <!-- mappping table, CSV, RDF projection -->
-  <TheMappingtable
-    :externalMappingTable="mappingfile"
-    @ackNewMapping="newMappingRow = []"
-  />
+  <TheMappingtable />
 
   <!-- Buttons for mapings (choose, show and export) 
   TODO: an own component or inline? -->
@@ -317,9 +314,6 @@ export default {
 
       message: [], //Format: ["text", "kind"]
 
-      // TODO: remove after split
-      openCloseSecondStepView: false, // false: closed, true: open
-
       mappingtable: [],
       mappingfile: {}, //  {result, fileExtension}
       newMappingRow: [],
@@ -384,7 +378,10 @@ export default {
   },
 
   methods: {
-    ...mapMutations({ newMessage: "messenger/newMessage" }),
+    ...mapMutations({
+      newMessage: "messenger/newMessage",
+      setFile: "mappingtable/setFile",
+    }),
 
     // Exports
     downloadMappingExport(txtContent, fileExtension) {
@@ -1181,10 +1178,16 @@ export default {
       let reader = new FileReader();
 
       reader.onload = async (e) => {
-        this.mappingfile = {
-          result: e.target.result,
+        this.setFile({
+          fileText: e.target.result,
           fileExtension: fileExtension,
-        };
+        });
+
+        // TODO: remove after split
+        // this.mappingfile = {
+        //   result: e.target.result,
+        //   fileExtension: fileExtension,
+        // };
 
         // CSV
         if (this.mappingtableExtension === "csv") {
@@ -1489,44 +1492,19 @@ export default {
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   async mounted() /* TODO: remove after split */ {
-    console.log("mount");
-    // window.mappingDataTable = new AppendGrid({
-    //   element: document.getElementById("mapppingtableCSV"),
-    //   initRows: 0,
-    //   uiFramework: "bulma",
-    //   iconFramework: "default",
-    //   hideButtons: {
-    //     // Hide the move up and move down button on each row
-    //     moveUp: true,
-    //     moveDown: true,
-    //     insert: true,
-    //     append: true,
-    //     removeLast: true,
-    //   },
-    //   columns: this.mappingDataTableConfig,
-    //   sectionClasses: {
-    //     table: "is-narrow is-fullwidth",
-    //   },
-    // });
-    // this.refreshMappingtableUI();
-
+    // console.log("mount");
     // console.log("def tree");
-
     // this.tree = {
     //   value: { source: [], target: [] },
     //   options: {
     //     source: [
     //       { label: "leaf alternate placement", id: 1 },
     //       { label: "perianth color", id: 6 },
-
     //       { label: "fruit pilosity", id: 5 },
     //       { label: "whole plant lifestyle", id: 2 },
-
     //       { label: "leaf morphology", id: 3 },
-
     //       { label: "stamen morphology", id: 4 },
     //     ],
-
     //     target: [
     //       { label: "life cycle habit", id: 8 },
     //       { label: "fruit hairiness", id: 11 },
@@ -1539,26 +1517,21 @@ export default {
     //   reloadKey: { source: 0, target: 0 }, // reload index for VUE reloads
     //   skos_flag: { source: false, target: false }, // we need to modify queries if it's a skos notation
     // };
-
     // function callback() {
     //   console.log("TEST");
     //   var allDivs = document.getElementsByTagName("*");
     //   var source = [1, 2, 3, 4, 5, 6];
     //   var target = [7, 8, 9, 10, 11, 12];
-
     //   for (var left in source) {
     //     var from = null,
     //       to = null;
-
     //     for (var singleDiv of allDivs) {
     //       console.log("left", source[left]);
-
     //       if (singleDiv.getAttribute("data-id") == source[left]) {
     //         from = singleDiv;
     //       } else if (singleDiv.getAttribute("data-id") == target[left]) {
     //         to = singleDiv;
     //       }
-
     //       if (from != null && to != null) {
     //         new LeaderLine(from, to);
     //         from = null;
