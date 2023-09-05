@@ -86,6 +86,8 @@
   <hr /> -->
   <!-- Debug END -->
 
+  <!-- <TheTreeStructure /> -->
+
   <div class="block">
     <!-- TODO: Component mapping table control? -->
     <div class="has-text-centered" @resize="selectValue">
@@ -265,6 +267,7 @@
 // Own components
 import TheMessenger from "@/components/TheMessenger";
 import TheMappingtable from "@/components/TheMappingtable";
+import TheTreeStructure from "@/components/TheTreeStructure";
 
 // import vuex mutations
 import { mapMutations } from "vuex";
