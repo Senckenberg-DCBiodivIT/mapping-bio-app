@@ -209,58 +209,7 @@
     </div>
   </div>
 
-  <div class="second-step" v-if="openCloseSecondStepView">
-    <form class="box">
-      <p class="title is-6 has-text-right">
-        V {{ secondStepData.versionMapper }}
-      </p>
-      <div class="field">
-        <label class="label">Author</label>
-        <div class="control">
-          <input class="input" type="text" v-model="secondStepData.author" />
-        </div>
-      </div>
-      <div class="field">
-        <label class="label">Mapping set title</label>
-        <div class="control">
-          <input
-            class="input"
-            type="text"
-            v-model="secondStepData.mappingSetTitle"
-          />
-        </div>
-      </div>
-
-      <div class="field">
-        <label class="label">Comment</label>
-        <div class="control">
-          <textarea
-            class="textarea"
-            rows="2"
-            v-model="secondStepData.comment"
-          />
-        </div>
-      </div>
-
-      <div class="field">
-        <label class="label">License</label>
-        <div class="control">
-          <input class="input" type="text" v-model="secondStepData.license" />
-        </div>
-      </div>
-
-      <div class="columns">
-        <div class="column has-text-centered">
-          <o-button variant="warning" @click="openCloseSecondStepView = false"
-            >Cancel</o-button
-          >
-        </div>
-        <div class="column has-text-centered">
-          <o-button variant="primary" @click="exportMapping">Download</o-button>
-        </div>
-      </div>
-    </form>
-  </div>
+  <TheExport class="second-step" v-if="openCloseSecondStepView" />>
 </template>
 
 <script setup>
@@ -268,6 +217,7 @@
 import TheMessenger from "@/components/TheMessenger";
 import TheMappingtable from "@/components/TheMappingtable";
 import TheTreeStructure from "@/components/TheTreeStructure";
+import TheExport from "@/components/TheExport";
 
 // import vuex mutations
 import { mapMutations } from "vuex";
@@ -312,8 +262,8 @@ export default {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
     return {
-      test: {},
       intervalPerformance: false,
+      openCloseSecondStepView: true, // this is the export component
 
       sourceFilename: "",
       targetFilename: "",
@@ -355,14 +305,6 @@ export default {
       ],
       dropdownExtension: ["", "csv", "rdf", "ttl", "json", "sssom"],
       dropdownExportFormatItem: 0,
-
-      secondStepData: {
-        versionMapper: process.env.VUE_APP_VERSION,
-        author: "",
-        mappingSetTitle: "",
-        comment: "",
-        license: "",
-      },
     };
   },
 
