@@ -346,15 +346,16 @@ export default {
         "skos:narrowMatch",
         "skos:relatedMatch",
       ],
-      dropdownItemsMatching: {
-        // TODO: ask Claus about...
-        // "skos:mappingRelation",
-        "skos:closeMatch": { csv: "skos:closeMatch" },
-        "skos:exactMatch": { csv: "skos:exactMatch" },
-        "skos:broadMatch": { csv: "skos:broadMatch" },
-        "skos:narrowMatch": { csv: "skos:narrowMatch" },
-        "skos:relatedMatch": { csv: "skos:relatedMatch" },
-      },
+      // TODO: delete after split
+      // dropdownItemsMatching: {
+      //   // TODO: ask Claus about...
+      //   // "skos:mappingRelation",
+      //   "skos:closeMatch": { csv: "skos:closeMatch" },
+      //   "skos:exactMatch": { csv: "skos:exactMatch" },
+      //   "skos:broadMatch": { csv: "skos:broadMatch" },
+      //   "skos:narrowMatch": { csv: "skos:narrowMatch" },
+      //   "skos:relatedMatch": { csv: "skos:relatedMatch" },
+      // },
 
       dropdownExportFormat: [
         "Export",
@@ -381,6 +382,7 @@ export default {
     ...mapMutations({
       newMessage: "messenger/newMessage",
       setFile: "mappingtable/setFile",
+      addMappingItem: "mappingtable/addMappingItem",
     }),
 
     // Exports
@@ -1225,6 +1227,8 @@ export default {
       ) {
         for (var left of this.tree.value.source) {
           for (var right of this.tree.value.target) {
+            var value = {};
+
             var sourceTitle = document
               .querySelectorAll(`[data-id='${left}']`)[0]
               .getElementsByTagName("label")[0].innerText;
@@ -1233,22 +1237,19 @@ export default {
               .querySelectorAll(`[data-id='${right}']`)[0]
               .getElementsByTagName("label")[0].innerText;
 
-            if (this.mappingtable[left] == undefined) {
-              this.mappingtable[left] = {};
-            }
-
-            this.mappingtable[left][right] = {
+            value = {
+              left: left.replace("_source", ""),
+              right: right.replace("_target", ""),
               sourceTitle: sourceTitle,
               targetTitle: targetTitle,
-              relation:
-                this.dropdownItemsMatching[
-                  this.dropdownItems[this.dropdownSelectedItem]
-                ].csv, // TODO: set the selected relation, but current we have different values in CSV and RDF...
+              relation: this.dropdownItems[this.dropdownSelectedItem],
               comment: "",
             };
           }
         }
-        // this.refreshMappingtableUI();
+        this.addMappingItem(value);
+
+        // TODO: use watcher after split
         this.resetArrows();
       }
 

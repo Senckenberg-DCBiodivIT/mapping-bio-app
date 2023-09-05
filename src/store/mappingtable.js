@@ -11,6 +11,7 @@ const mappingtable = {
       return state.file;
     },
     getMappingtable(state) {
+      console.log("getMappingtable");
       return state.mappingtable;
     },
   },
@@ -25,11 +26,25 @@ const mappingtable = {
       state.mappingtable = value;
     },
 
-    addToMappingtable(state, value) {
-      state.mappingtable = value;
+    addMappingItem(state, value) {
+      // value:{left, right, sourceTitle, targetTitle, relation, comment}
+      let tempMappingtable = JSON.parse(JSON.stringify(state.mappingtable));
+
+      if (tempMappingtable[value.left] == undefined) {
+        tempMappingtable[value.left] = {};
+      }
+
+      tempMappingtable[value.left][value.right] = {
+        sourceTitle: value.sourceTitle,
+        targetTitle: value.targetTitle,
+        relation: value.relation,
+        comment: value.comment,
+      };
+
+      state.mappingtable = tempMappingtable;
     },
 
-    // updateMapingtable(state, value) {
+    // updateMaping(state, value) {
     // state.fileText = text;
     // TODO
     // },

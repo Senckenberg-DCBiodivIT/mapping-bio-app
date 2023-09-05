@@ -158,6 +158,7 @@ export default {
       // file: { fileText: "", fileExtension: "" }
       getFile: "mappingtable/getFile",
       getMappingtable: "mappingtable/getMappingtable",
+      // updateMaping: "mappingtable/updateMaping",
     }),
   },
   methods: {
@@ -207,7 +208,7 @@ export default {
       // console.groupEnd();
     },
 
-    updateMapping(id, param) {
+    updateMapping(id, param) /* TODO */ {
       /*
       Here you can update the mapping table data after a change in the UI
       like "relation" or "comment"
@@ -279,7 +280,7 @@ export default {
         };
       }
       this.setMappingtable(mappingtable);
-      this.refreshMappingtableUI();
+      // this.refreshMappingtableUI();
 
       // console.groupEnd();
     },
@@ -346,7 +347,7 @@ export default {
         console.log("mappingtable", mappingtable);
 
         this.setMappingtable(mappingtable);
-        this.refreshMappingtableUI();
+        // this.refreshMappingtableUI();
       });
     },
   },
@@ -390,6 +391,13 @@ export default {
         } else {
           // TODO: create a warning message
         }
+      },
+      deep: true,
+    },
+    getMappingtable: {
+      handler(newData) {
+        console.log("Watcher getMappingtable");
+        this.refreshMappingtableUI();
       },
       deep: true,
     },
