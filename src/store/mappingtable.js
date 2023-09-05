@@ -10,6 +10,9 @@ const mappingtable = {
     getFile(state) {
       return state.file;
     },
+    getMappingtable(state) {
+      return state.mappingtable;
+    },
   },
 
   mutations: {
@@ -26,10 +29,10 @@ const mappingtable = {
       state.mappingtable = value;
     },
 
-    updateMapingtable(state, value) {
-      // state.fileText = text;
-      // TODO
-    },
+    // updateMapingtable(state, value) {
+    // state.fileText = text;
+    // TODO
+    // },
   },
 };
 

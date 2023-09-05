@@ -40,6 +40,7 @@ import AppendGrid from "jquery.appendgrid";
 
 // Store
 import { mapGetters } from "vuex";
+import { mapMutations } from "vuex";
 
 // RDF
 import rdfParser from "rdf-parse";
@@ -60,8 +61,6 @@ export default {
       query: query, // external stored queries for a better readability
 
       openCloseTableView: true, // false: closed, true: open
-
-      mappingtable: [],
 
       rdfObj_engines_mapping: {},
 
@@ -158,9 +157,12 @@ export default {
     ...mapGetters({
       // file: { fileText: "", fileExtension: "" }
       getFile: "mappingtable/getFile",
+      getMappingtable: "mappingtable/getMappingtable",
     }),
   },
   methods: {
+    ...mapMutations({ setMappingtable: "mappingtable/setMappingtable" }),
+
     refreshMappingtableUI() {
       /*
           Here you can manually refresh the UI state based on the current mapping state like
@@ -175,18 +177,20 @@ export default {
       var currentState = [];
       // console.log("this.mappingtable", this.mappingtable);
 
-      for (var idxSource in this.mappingtable) {
+      for (var idxSource in this.getMappingtable) {
         // console.log("idxSource", idxSource);
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
+        for (var idxTarget of Object.keys(this.getMappingtable[idxSource])) {
           currentState.push({
-            relation: this.mappingtable[idxSource][idxTarget]["relation"]
+            relation: this.getMappingtable[idxSource][idxTarget]["relation"]
               .replaceAll("(", "")
               .replaceAll(")", ""),
-            sourceTitle: this.mappingtable[idxSource][idxTarget]["sourceTitle"],
+            sourceTitle:
+              this.getMappingtable[idxSource][idxTarget]["sourceTitle"],
             sourceLink: idxSource,
-            targetTitle: this.mappingtable[idxSource][idxTarget]["targetTitle"],
+            targetTitle:
+              this.getMappingtable[idxSource][idxTarget]["targetTitle"],
             targetLink: idxTarget,
-            comment: this.mappingtable[idxSource][idxTarget]["comment"],
+            comment: this.getMappingtable[idxSource][idxTarget]["comment"],
           });
         }
       }
@@ -235,6 +239,8 @@ export default {
     },
 
     loadCSV(data) {
+      // console.group("Load CSV mapping table");
+
       /*
           Format mapping CSV:
           0 relation
@@ -256,29 +262,33 @@ export default {
           }
          }
          */
-
+      var mappingtable = [];
       var mappingtableRows = data.split("\n");
       mappingtableRows.pop();
       // console.log("mappingtableRows", mappingtableRows);
       for (var cell of mappingtableRows) {
         var cellInRow = cell.split(",");
-        if (this.mappingtable[cellInRow[2]] == undefined) {
-          this.mappingtable[cellInRow[2]] = {};
+        if (mappingtable[cellInRow[2]] == undefined) {
+          mappingtable[cellInRow[2]] = {};
         }
-        this.mappingtable[cellInRow[2]][cellInRow[4]] = {
+        mappingtable[cellInRow[2]][cellInRow[4]] = {
           sourceTitle: cellInRow[1],
           targetTitle: cellInRow[3],
           relation: cellInRow[0],
           comment: cellInRow[5],
         };
       }
+      this.setMappingtable(mappingtable);
       this.refreshMappingtableUI();
+
+      // console.groupEnd();
     },
 
     async loadRDF(data) {
-      console.log("RDF (XML, TTL or SSSOM) selected");
+      console.log("Load RDF (XML, TTL or SSSOM) mapping table");
 
       var mimeType = "";
+      var mappingtable = [];
 
       if (data.fileExtension == "ttl" || data.fileExtension == "sssom") {
         // TODO: take care about sssom
@@ -316,17 +326,15 @@ export default {
         // );
 
         if (
-          this.mappingtable[
-            bindings.entries.hashmap.node.children[0].value.value
-          ] == undefined
+          mappingtable[bindings.entries.hashmap.node.children[0].value.value] ==
+          undefined
         ) {
-          this.mappingtable[
-            bindings.entries.hashmap.node.children[0].value.value
-          ] = {};
+          mappingtable[bindings.entries.hashmap.node.children[0].value.value] =
+            {};
         }
-        this.mappingtable[
-          bindings.entries.hashmap.node.children[0].value.value
-        ][bindings.entries.hashmap.node.children[1].value.value] = {
+        mappingtable[bindings.entries.hashmap.node.children[0].value.value][
+          bindings.entries.hashmap.node.children[1].value.value
+        ] = {
           sourceTitle: "Enter a title for the CSV export here",
           targetTitle: "Enter a title for the CSV export here",
           relation: bindings.entries.hashmap.node.children[2].value.value,
@@ -335,15 +343,16 @@ export default {
       });
 
       bindingsStream.on("end", () => {
-        console.log("this.mappingtable", this.mappingtable);
+        console.log("mappingtable", mappingtable);
 
+        this.setMappingtable(mappingtable);
         this.refreshMappingtableUI();
       });
     },
   },
 
   async mounted() {
-    console.log("mount mappingtable");
+    // console.log("mount mappingtable");
 
     window.mappingDataTable = new AppendGrid({
       element: document.getElementById("mapppingtable"),
