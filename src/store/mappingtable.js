@@ -11,7 +11,6 @@ const mappingtable = {
       return state.file;
     },
     getMappingtable(state) {
-      console.log("getMappingtable");
       return state.mappingtable;
     },
   },

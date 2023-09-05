@@ -312,14 +312,9 @@ export default {
       test: {},
       intervalPerformance: false,
 
-      message: [], //Format: ["text", "kind"]
-
-      mappingtable: [],
-      mappingfile: {}, //  {result, fileExtension}
-      newMappingRow: [],
-
       sourceFilename: "",
       targetFilename: "",
+      mappingtableFilename: "",
 
       arrows: [],
 
@@ -346,16 +341,6 @@ export default {
         "skos:narrowMatch",
         "skos:relatedMatch",
       ],
-      // TODO: delete after split
-      // dropdownItemsMatching: {
-      //   // TODO: ask Claus about...
-      //   // "skos:mappingRelation",
-      //   "skos:closeMatch": { csv: "skos:closeMatch" },
-      //   "skos:exactMatch": { csv: "skos:exactMatch" },
-      //   "skos:broadMatch": { csv: "skos:broadMatch" },
-      //   "skos:narrowMatch": { csv: "skos:narrowMatch" },
-      //   "skos:relatedMatch": { csv: "skos:relatedMatch" },
-      // },
 
       dropdownExportFormat: [
         "Export",
@@ -1261,90 +1246,6 @@ export default {
       console.groupEnd();
     },
 
-    // updateMapping(id, param) {
-    //   /*
-    //   Here you can update the mapping table data after a change in the UI
-    //   like "relation" or "comment"
-    //   */
-
-    //   id--; // Table-widget counts from 1 to n
-
-    //   console.group("updateMapping", id, param);
-
-    //   // Get updated value
-    //   var updatedValue = window.mappingDataTable.getCtrlValue(param, id);
-    //   var mappingtableSourceID = window.mappingDataTable.getCtrlValue(
-    //     "sourceLink",
-    //     id
-    //   );
-    //   var mappingtableTargetID = window.mappingDataTable.getCtrlValue(
-    //     "targetLink",
-    //     id
-    //   );
-
-    //   // Set updated value
-    //   this.mappingtable[mappingtableSourceID][mappingtableTargetID][param] =
-    //     updatedValue;
-
-    //   // Update the tree view
-    //   this.showArrowFromMappingtable(id + 1); // This function works with internal table-widget index. Table counts from 1 to n
-
-    //   console.groupEnd();
-    // },
-
-    // TODO: remove after split
-    refreshMappingtableUI() {
-      /*
-          Here you can manually refresh the UI state based on the current mapping state like
-          - a loaded CSV
-          - a loaded RDF with XML notation
-          - a changed state after an activity from user
-            - create a new
-            - or delete a relation between two ontologies
-      */
-
-      console.group("refreshMappingtableUI");
-      var currentState = [];
-      console.log("this.mappingtable", this.mappingtable);
-
-      for (var idxSource in this.mappingtable) {
-        console.log("idxSource", idxSource);
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
-          currentState.push({
-            relation: this.mappingtable[idxSource][idxTarget]["relation"]
-              .replaceAll("(", "")
-              .replaceAll(")", ""),
-            sourceTitle: this.mappingtable[idxSource][idxTarget]["sourceTitle"],
-            sourceLink: idxSource,
-            targetTitle: this.mappingtable[idxSource][idxTarget]["targetTitle"],
-            targetLink: idxTarget,
-            comment: this.mappingtable[idxSource][idxTarget]["comment"],
-          });
-        }
-      }
-
-      // if (currentState.length == 0) {
-      //   currentState.push({
-      //     relation: "",
-      //     sourceTitle: "",
-      //     sourceLink: "",
-      //     targetTitle: "",
-      //     targetLink: "",
-      //     comment: "",
-      //   });
-      // }
-      console.log("currentState", currentState);
-
-      if (currentState.length == 0) {
-        window.mappingDataTable.load([[]]);
-        window.mappingDataTable.removeRow(0);
-      } else {
-        window.mappingDataTable.load(currentState);
-      }
-
-      console.groupEnd();
-    },
-
     // Tree interactions
     selectValue() {
       /*
@@ -1393,6 +1294,7 @@ export default {
       // console.groupEnd();
     },
 
+    // TODO: remove after split
     showArrowFromMappingtable(uniqueIndex) {
       // console.group("showArrowFromMappingtable", uniqueIndex);
 
@@ -1411,6 +1313,7 @@ export default {
       // console.groupEnd();
     },
 
+    // TODO: remove after split
     showAllArrowsFromMappingtable() {
       console.group("showAllArrowsFromMappingtable");
       this.resetArrows();
@@ -1444,6 +1347,8 @@ export default {
 
       console.groupEnd();
     },
+
+    // TODO: remove after split
 
     updateHeight() {
       var clearMyInterval = (param = this.intervalPerformance) =>

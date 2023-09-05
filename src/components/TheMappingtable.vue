@@ -379,8 +379,6 @@ export default {
         table: "is-narrow is-fullwidth",
       },
     });
-
-    this.refreshMappingtableUI();
   },
 
   watch: {
