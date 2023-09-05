@@ -54,8 +54,6 @@ import { query } from "@/components/query";
 <script>
 export default {
   name: "TheMappingtable",
-  props: [""],
-  emit: [""],
   data() {
     return {
       query: query, // external stored queries for a better readability
@@ -153,12 +151,14 @@ export default {
       ],
     };
   },
+
   computed: {
     ...mapGetters({
       getFile: "mappingtable/getFile",
       getMappingtable: "mappingtable/getMappingtable",
     }),
   },
+
   methods: {
     ...mapMutations({
       setMappingtable: "mappingtable/setMappingtable",
@@ -288,7 +288,6 @@ export default {
         };
       }
       this.setMappingtable(mappingtable);
-      // this.refreshMappingtableUI();
 
       // console.groupEnd();
     },
@@ -355,7 +354,6 @@ export default {
         console.log("mappingtable", mappingtable);
 
         this.setMappingtable(mappingtable);
-        // this.refreshMappingtableUI();
       });
     },
   },
@@ -381,6 +379,7 @@ export default {
         table: "is-narrow is-fullwidth",
       },
     });
+
     this.refreshMappingtableUI();
   },
 
