@@ -62,7 +62,7 @@ export default {
 
       openCloseTableView: true, // false: closed, true: open
 
-      rdfObj_engines_mapping: {},
+      rdfEngine: {},
 
       mappingDataTableConfig: [
         {
@@ -312,9 +312,9 @@ export default {
       });
 
       const store = await storeStream(quadStream);
-      this.rdfObj_engines_mapping = new Engine(store);
+      this.rdfEngine = new Engine(store);
 
-      var bindingsStream = await this.rdfObj_engines_mapping.queryBindings(
+      var bindingsStream = await this.rdfEngine.queryBindings(
         this.query.testQuery
       );
       // ].queryBindings(this.query.mappingRow);
@@ -395,8 +395,7 @@ export default {
       deep: true,
     },
     getMappingtable: {
-      handler(newData) {
-        console.log("Watcher getMappingtable");
+      handler() {
         this.refreshMappingtableUI();
       },
       deep: true,
