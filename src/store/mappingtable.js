@@ -28,7 +28,8 @@ const mappingtable = {
 
     addMappingItem(state, value) {
       // value:{left, right, sourceTitle, targetTitle, relation, comment}
-      let tempMappingtable = JSON.parse(JSON.stringify(state.mappingtable));
+
+      let tempMappingtable = Object.assign({}, state.mappingtable);
 
       if (tempMappingtable[value.left] == undefined) {
         tempMappingtable[value.left] = {};
@@ -44,10 +45,17 @@ const mappingtable = {
       state.mappingtable = tempMappingtable;
     },
 
-    // updateMaping(state, value) {
-    // state.fileText = text;
-    // TODO
-    // },
+    updateMapping(state, value) {
+      //   // value:{mappingtableSourceID, mappingtableTargetID, param, updatedValue}
+
+      let tempMappingtable = Object.assign({}, state.mappingtable);
+
+      tempMappingtable[value.mappingtableSourceID][value.mappingtableTargetID][
+        value.param
+      ] = value.updatedValue;
+
+      state.mappingtable = tempMappingtable;
+    },
   },
 };
 

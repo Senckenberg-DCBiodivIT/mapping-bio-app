@@ -1245,9 +1245,9 @@ export default {
               relation: this.dropdownItems[this.dropdownSelectedItem],
               comment: "",
             };
+            this.addMappingItem(value);
           }
         }
-        this.addMappingItem(value);
 
         // TODO: use watcher after split
         this.resetArrows();

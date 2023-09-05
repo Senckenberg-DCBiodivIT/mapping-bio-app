@@ -79,7 +79,7 @@ export default {
           ],
           events: {
             change: (e, that = this) => {
-              that.updateMapping(e.uniqueIndex, "relation");
+              that.updateMappingValue(e.uniqueIndex, "relation");
             },
           },
         },
@@ -146,7 +146,7 @@ export default {
               that.showArrowFromMappingtable(e.uniqueIndex);
             },
             change: (e, that = this) => {
-              that.updateMapping(e.uniqueIndex, "comment");
+              that.updateMappingValue(e.uniqueIndex, "comment");
             },
           },
         },
@@ -155,14 +155,19 @@ export default {
   },
   computed: {
     ...mapGetters({
-      // file: { fileText: "", fileExtension: "" }
       getFile: "mappingtable/getFile",
       getMappingtable: "mappingtable/getMappingtable",
-      // updateMaping: "mappingtable/updateMaping",
     }),
   },
   methods: {
-    ...mapMutations({ setMappingtable: "mappingtable/setMappingtable" }),
+    ...mapMutations({
+      setMappingtable: "mappingtable/setMappingtable",
+      updateMapping: "mappingtable/updateMapping",
+    }),
+
+    showArrowFromMappingtable() {
+      // TODO
+    },
 
     refreshMappingtableUI() {
       /*
@@ -208,7 +213,7 @@ export default {
       // console.groupEnd();
     },
 
-    updateMapping(id, param) /* TODO */ {
+    updateMappingValue(id, param) /* TODO */ {
       /*
       Here you can update the mapping table data after a change in the UI
       like "relation" or "comment"
@@ -216,27 +221,30 @@ export default {
 
       id--; // Table-widget counts from 1 to n
 
-      console.group("updateMapping", id, param);
+      // console.group("updateMapping", id, param);
 
       // Get updated value
-      var updatedValue = window.mappingDataTable.getCtrlValue(param, id);
-      var mappingtableSourceID = window.mappingDataTable.getCtrlValue(
+      let updatedValue = window.mappingDataTable.getCtrlValue(param, id);
+      let mappingtableSourceID = window.mappingDataTable.getCtrlValue(
         "sourceLink",
         id
       );
-      var mappingtableTargetID = window.mappingDataTable.getCtrlValue(
+      let mappingtableTargetID = window.mappingDataTable.getCtrlValue(
         "targetLink",
         id
       );
 
       // Set updated value
-      this.mappingtable[mappingtableSourceID][mappingtableTargetID][param] =
-        updatedValue;
+      let value = {
+        mappingtableSourceID: mappingtableSourceID,
+        mappingtableTargetID: mappingtableTargetID,
+        param: param,
+        updatedValue: updatedValue,
+      };
+      console.log("updateMapping now");
+      this.updateMapping(value);
 
-      // TODO: rewrite => Update the tree view
-      // this.showArrowFromMappingtable(id + 1); // This function works with internal table-widget index. Table counts from 1 to n
-
-      console.groupEnd();
+      // console.groupEnd();
     },
 
     loadCSV(data) {
