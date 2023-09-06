@@ -39,8 +39,7 @@
 import AppendGrid from "jquery.appendgrid";
 
 // Store
-import { mapGetters } from "vuex";
-import { mapMutations } from "vuex";
+import { mapMutations, mapGetters } from "vuex";
 
 // RDF
 import rdfParser from "rdf-parse";
