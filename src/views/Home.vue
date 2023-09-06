@@ -242,25 +242,11 @@ import LeaderLine from "leader-line-new";
 
 // RDF
 import rdfParser from "rdf-parse";
-import rdf from "@rdfjs/data-model";
 
 // Quadstore & Co
 import { Engine } from "quadstore-comunica";
 import { storeStream } from "rdf-store-stream";
 import { query } from "@/components/query";
-
-// Export RDF
-import { Readable } from "readable-stream";
-
-import prefixes from "@zazuko/rdf-vocabularies/prefixes";
-
-import {
-  turtle,
-  rdfXml,
-  jsonld,
-} from "@rdfjs-elements/formats-pretty/serializers";
-
-import getStream from "get-stream";
 </script>
 
 <script>

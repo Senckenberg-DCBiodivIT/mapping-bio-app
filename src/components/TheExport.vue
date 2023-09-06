@@ -43,6 +43,22 @@
 
 <script setup>
 import { mapMutations, mapGetters } from "vuex";
+
+// RDF
+import rdf from "@rdfjs/data-model";
+
+// Export RDF
+import { Readable } from "readable-stream";
+
+import prefixes from "@zazuko/rdf-vocabularies/prefixes";
+
+import {
+  turtle,
+  rdfXml,
+  jsonld,
+} from "@rdfjs-elements/formats-pretty/serializers";
+
+import getStream from "get-stream";
 </script>
 
 <script>
@@ -66,28 +82,9 @@ export default {
   },
 
   methods: {
-    ...mapMutations({}),
+    ...mapMutations({}), // Later maybe we need a error message
 
-    downloadMappingExport(txtContent, fileExtension) /**OK */ {
-      var exportElement = document.createElement("a");
-      exportElement.href =
-        "data:text/csv;charset=utf-8," + encodeURIComponent(txtContent);
-      exportElement.target = "_blank";
-
-      exportElement.download = `Mapping_Table.${fileExtension}`;
-      exportElement.click();
-    },
-
-    exportMapping() /**OK */ {
-      if (this.fileExtension === "csv") {
-        this.exportCSV();
-      } else if (this.fileExtension == "sssom") {
-        this.exportSSSOM();
-      } else this.exportRDF(this.fileExtension);
-    },
-    /*
-    async exportSSSOM() {
-      // Export SSSOM here as a json-ld for Cordra and other purposes
+    async exportSSSOM() /**OK */ {
       console.group("exportSSSOM");
 
       var input = [];
@@ -96,9 +93,9 @@ export default {
       var singleMappingsIDs = [];
 
       // Clean data
-      for (var idxSource in this.mappingtable) {
+      for (var idxSource in this.getMappingtable) {
         var clean_idxSource = this.cleanSuffix(idxSource);
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
+        for (var idxTarget of Object.keys(this.getMappingtable[idxSource])) {
           var clean_idxTarget = this.cleanSuffix(idxTarget);
 
           // Create mapping node
@@ -106,7 +103,7 @@ export default {
             rdf.quad(
               rdf.namedNode(clean_idxSource),
               rdf.namedNode(
-                this.mappingtable[idxSource][idxTarget]["relation"]
+                this.getMappingtable[idxSource][idxTarget]["relation"]
               ),
               rdf.namedNode(clean_idxTarget)
             )
@@ -128,7 +125,7 @@ export default {
             rdf.quad(
               rdf.blankNode(singleMappingsID),
               rdf.namedNode("sssom:comment"),
-              rdf.literal(this.mappingtable[idxSource][idxTarget]["comment"])
+              rdf.literal(this.getMappingtable[idxSource][idxTarget]["comment"])
             )
           );
 
@@ -191,7 +188,9 @@ export default {
             rdf.quad(
               rdf.blankNode(singleMappingsID),
               rdf.namedNode("sssom:predicate_id"),
-              rdf.literal(this.mappingtable[idxSource][idxTarget]["relation"])
+              rdf.literal(
+                this.getMappingtable[idxSource][idxTarget]["relation"]
+              )
             )
           );
 
@@ -225,7 +224,7 @@ export default {
         rdf.quad(
           rdf.blankNode("MappingSet"),
           rdf.namedNode("sssom:author_label"),
-          rdf.literal(this.secondStepData.author)
+          rdf.literal(this.author)
         )
       );
 
@@ -240,7 +239,7 @@ export default {
         rdf.quad(
           rdf.blankNode("MappingSet"),
           rdf.namedNode("sssom:mapping_tool_version"),
-          rdf.literal(this.secondStepData.versionMapper)
+          rdf.literal(this.versionMapper)
         )
       );
 
@@ -256,7 +255,7 @@ export default {
         rdf.quad(
           rdf.blankNode("MappingSet"),
           rdf.namedNode("sssom:comment"),
-          rdf.literal(this.secondStepData.comment)
+          rdf.literal(this.comment)
         )
       );
 
@@ -280,7 +279,7 @@ export default {
         rdf.quad(
           rdf.blankNode("MappingSet"),
           rdf.namedNode("sssom:license"),
-          rdf.literal(this.secondStepData.license)
+          rdf.literal(this.license)
         )
       );
 
@@ -334,7 +333,7 @@ export default {
         rdf.quad(
           rdf.blankNode("MappingSet"),
           rdf.namedNode("sssom:mapping_set_title"),
-          rdf.literal(this.secondStepData.mappingSetTitle)
+          rdf.literal(this.mappingSetTitle)
         )
       );
       mappingSet.push(
@@ -389,7 +388,7 @@ export default {
       }
 
       console.groupEnd();
-    },*/
+    },
 
     exportCSV() /**OK */ {
       var currentState = [];
@@ -574,6 +573,29 @@ export default {
       }
       console.groupEnd();
     },*/
+
+    // Helper
+    cleanSuffix(input) /**OK */ {
+      return input.replace("_source", "").replace("_target", "");
+    },
+
+    downloadMappingExport(txtContent, fileExtension) /**OK */ {
+      var exportElement = document.createElement("a");
+      exportElement.href =
+        "data:text/csv;charset=utf-8," + encodeURIComponent(txtContent);
+      exportElement.target = "_blank";
+
+      exportElement.download = `Mapping_Table.${fileExtension}`;
+      exportElement.click();
+    },
+
+    exportMapping() /**OK */ {
+      if (this.fileExtension === "csv") {
+        this.exportCSV();
+      } else if (this.fileExtension == "sssom") {
+        this.exportSSSOM();
+      } else this.exportRDF(this.fileExtension);
+    },
   },
 };
 </script>
