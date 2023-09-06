@@ -209,7 +209,15 @@
     </div>
   </div>
 
-  <TheExport class="second-step" v-if="openCloseSecondStepView" />>
+  <TheExport
+    class="second-step"
+    @openClose="
+      (value) => {
+        openCloseSecondStepView = value;
+      }
+    "
+    v-if="openCloseSecondStepView == 'open'"
+  />>
 </template>
 
 <script setup>
@@ -263,7 +271,7 @@ export default {
   data() {
     return {
       intervalPerformance: false,
-      openCloseSecondStepView: true, // this is the export component
+      openCloseSecondStepView: "open", // this is the export component. Use 'open' or 'close'
 
       sourceFilename: "",
       targetFilename: "",

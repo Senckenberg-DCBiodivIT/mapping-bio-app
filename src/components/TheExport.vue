@@ -30,7 +30,7 @@
 
     <div class="columns">
       <div class="column has-text-centered">
-        <o-button variant="warning" @click="openCloseSecondStepView = false"
+        <o-button variant="warning" @click="$emit('openClose', 'close')"
           >Cancel</o-button
         >
       </div>
@@ -44,6 +44,7 @@
 <script>
 export default {
   name: "TheExport",
+  emits: ["openClose"],
 
   data() {
     return {
