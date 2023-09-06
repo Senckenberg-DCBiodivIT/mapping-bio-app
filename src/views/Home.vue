@@ -216,6 +216,7 @@
         openCloseSecondStepView = value;
       }
     "
+    :fileExtension="dropdownExtension[dropdownExportFormatItem]"
     v-if="openCloseSecondStepView == 'open'"
   />>
 </template>
@@ -322,523 +323,6 @@ export default {
       setFile: "mappingtable/setFile",
       addMappingItem: "mappingtable/addMappingItem",
     }),
-
-    // Exports
-    downloadMappingExport(txtContent, fileExtension) {
-      var exportElement = document.createElement("a");
-      exportElement.href =
-        "data:text/csv;charset=utf-8," + encodeURIComponent(txtContent);
-      exportElement.target = "_blank";
-
-      exportElement.download = `Mapping_Table.${fileExtension}`;
-      exportElement.click();
-    },
-
-    exportMapping() {
-      console.group("exportMapping");
-
-      if (this.dropdownExportFormatItem > 0) {
-        if (this.dropdownExportFormatItem == 1) {
-          this.exportCSV();
-        } else if (this.dropdownExportFormatItem == 5) {
-          this.exportSSSOM();
-        } else
-          this.exportRDF(this.dropdownExtension[this.dropdownExportFormatItem]);
-      }
-      console.groupEnd();
-    },
-
-    async exportSSSOM() {
-      // Export SSSOM here as a json-ld for Cordra and other purposes
-      console.group("exportSSSOM");
-
-      var input = [];
-      var mappingSet = [];
-      var singleMappings = [];
-      var singleMappingsIDs = [];
-
-      // Clean data
-      for (var idxSource in this.mappingtable) {
-        var clean_idxSource = this.cleanSuffix(idxSource);
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
-          var clean_idxTarget = this.cleanSuffix(idxTarget);
-
-          // Create mapping node
-          input.push(
-            rdf.quad(
-              rdf.namedNode(clean_idxSource),
-              rdf.namedNode(
-                this.mappingtable[idxSource][idxTarget]["relation"]
-              ),
-              rdf.namedNode(clean_idxTarget)
-            )
-          );
-
-          // Discribe mapping
-          let singleMappingsID = `${clean_idxSource}_${clean_idxTarget}`;
-          singleMappingsIDs.push(singleMappingsID);
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("rdf:type"),
-              rdf.namedNode("owl:Axiom")
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:comment"),
-              rdf.literal(this.mappingtable[idxSource][idxTarget]["comment"])
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:confidence"),
-              rdf.literal("empty here") // TODO: link data here
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(`${clean_idxSource}_${clean_idxTarget}`),
-              rdf.namedNode("sssom:last_updated"),
-              rdf.literal(new Date().toUTCString())
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:mapping_cardinality"),
-              rdf.literal("empty here") // TODO: check and put here (1:1 or 1:n. Any other comopsition is not available)
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:mapping_date"),
-              rdf.literal("empty here") // TODO: Use the creation date here
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:mappings"),
-              rdf.literal(`[${clean_idxSource}, ${clean_idxTarget}`)
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:object_id"),
-              rdf.literal(clean_idxTarget)
-            )
-          );
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:object_label"),
-              rdf.literal("Put label here") // TODO: Put label here
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:predicate_id"),
-              rdf.literal(this.mappingtable[idxSource][idxTarget]["relation"])
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:subject_id"),
-              rdf.literal(clean_idxSource)
-            )
-          );
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:subject_label"),
-              rdf.literal("Put label here") // TODO: Put label here
-            )
-          );
-        }
-      }
-
-      // Create mapping set here
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("rdf:type"),
-          rdf.literal("sssom:MappingSet")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:author_label"),
-          rdf.literal(this.secondStepData.author)
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_tool"),
-          rdf.literal("mapping.bio")
-        )
-      );
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_tool_version"),
-          rdf.literal(this.secondStepData.versionMapper)
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_provider"),
-          rdf.literal("https://mapping.bio")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:comment"),
-          rdf.literal(this.secondStepData.comment)
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:imports"),
-          rdf.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:last_updated"),
-          rdf.literal(new Date().toUTCString())
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:license"),
-          rdf.literal(this.secondStepData.license)
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_date"),
-          rdf.literal(new Date().toUTCString()) // TODO: Use the creation date here, if there is an available
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_registry_description"),
-          rdf.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_registry_id"),
-          rdf.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_registry_title"),
-          rdf.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_set_id"),
-          rdf.literal("") // TODO: a bigger part to do. Use the old one if available
-        )
-      );
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_set_source"),
-          rdf.literal("") // TODO: open discussion
-        )
-      );
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_set_title"),
-          rdf.literal(this.secondStepData.mappingSetTitle)
-        )
-      );
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_set_version"),
-          rdf.literal("") // TODO: Format?
-        )
-      );
-
-      // include single mappings
-      for (var item of singleMappingsIDs) {
-        mappingSet.push(
-          rdf.quad(
-            rdf.blankNode("MappingSet"),
-            rdf.namedNode("sssom:mappings"),
-            rdf.blankNode(item)
-          )
-        );
-      }
-
-      const { schema, dcterms, foaf, rdfs, skos, owl } = prefixes;
-      const sssom = "https://w3id.org/sssom/";
-
-      var runExportFlag = true;
-
-      var sink = await turtle({
-        // var sink = await rdfXml({
-        // var sink = await jsonld({
-        prefixes: {
-          schema,
-          dcterms,
-          foaf,
-          rdfs,
-          skos,
-          owl,
-          sssom,
-        },
-      });
-      // console.log("sink", sink);
-
-      if (runExportFlag) {
-        var exportArray = input.concat(mappingSet).concat(singleMappings);
-        console.log("exportArray", exportArray);
-
-        console.log("Try to create a stream with sink");
-        const stream = await sink.import(Readable.from(exportArray));
-
-        let content = await getStream(stream);
-        console.log("Content created", content);
-        this.downloadMappingExport(content, "sssom"); // TODO: set json later
-      }
-
-      console.groupEnd();
-    },
-
-    exportCSV() {
-      console.group("exportCSV");
-
-      var currentState = [];
-      for (var idxSource in this.mappingtable) {
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
-          currentState.push([
-            this.mappingtable[idxSource][idxTarget]["relation"],
-            this.mappingtable[idxSource][idxTarget]["sourceTitle"],
-            idxSource,
-            this.mappingtable[idxSource][idxTarget]["targetTitle"],
-            idxTarget,
-            this.mappingtable[idxSource][idxTarget]["comment"],
-          ]);
-        }
-      }
-      var csv = "";
-
-      currentState.forEach(function (row) {
-        csv += row.join(",");
-        csv += "\n";
-      });
-
-      this.downloadMappingExport(csv, "csv");
-
-      console.groupEnd();
-    },
-
-    async exportRDF(fileExtension) {
-      console.group(`exportRDF as a ${fileExtension}`);
-
-      var input = [];
-      var labelReady = []; // To prevent doubling
-
-      for (var idxSource in this.mappingtable) {
-        // Clean data
-        var clean_idxSource = this.cleanSuffix(idxSource);
-
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
-          // Label source
-
-          // Clean data
-          var clean_idxTarget = this.cleanSuffix(idxTarget);
-
-          if (!labelReady.includes(idxSource)) {
-            input.push(
-              rdf.quad(
-                rdf.namedNode("owl:class"),
-                rdf.namedNode("id"),
-                rdf.literal(`${clean_idxSource}`)
-              )
-            );
-            //   // Create new label
-            input.push(
-              rdf.quad(
-                rdf.namedNode(`${clean_idxSource}`),
-                rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
-                rdf.literal(
-                  this.mappingtable[idxSource][idxTarget]["sourceTitle"]
-                )
-              )
-            );
-            labelReady.push(idxSource);
-          }
-          // // Label Target
-          if (!labelReady.includes(idxTarget)) {
-            // Check namedNodes
-            input.push(
-              rdf.quad(
-                rdf.namedNode("owl:class"),
-                rdf.namedNode("id"),
-                rdf.literal(`${clean_idxTarget}`)
-              )
-            );
-            // Create new label
-            input.push(
-              rdf.quad(
-                rdf.namedNode(`${clean_idxTarget}`),
-                rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
-                rdf.literal(
-                  this.mappingtable[idxSource][idxTarget]["targetTitle"]
-                )
-              )
-            );
-            labelReady.push(idxTarget);
-          }
-
-          // TODO
-          // input.push(
-          //   rdf.quad(
-          //     rdf.namedNode(`${idxSource}`),
-          //     rdf.namedNode(
-          //       // TODO: check prefix
-          //       this.mappingtable[idxSource][idxTarget]["relation"]
-          //       // "TEST_123"
-          //     ),
-          //     rdf.namedNode(`${idxTarget}`)
-          //   )
-          // );
-
-          // input.push(
-          //   rdf.quad(
-          //     rdf.namedNode(`${idxSource}`),
-
-          //     rdf.namedNode(`${idxTarget}`),
-          //     rdf.literal(
-          //       // TODO: check that
-          //       "mes:" + '"1.0"^^<http://www.w3.org/2001/XMLSchema#float>'
-          //     )
-          //   )
-          // );
-        }
-      }
-      console.log(input);
-
-      const { schema, dcterms, foaf, rdfs, skos } = prefixes;
-      var sink;
-      var runExportFlag = false;
-
-      if (fileExtension === "ttl") {
-        sink = await turtle({
-          prefixes: {
-            schema,
-            dcterms,
-            foaf,
-            rdfs,
-            skos,
-          },
-        });
-
-        runExportFlag = true;
-      } else if (fileExtension === "rdf") {
-        sink = await rdfXml({
-          prefixes: {
-            schema,
-            dcterms,
-            foaf,
-            rdfs,
-            skos,
-          },
-        });
-
-        runExportFlag = true;
-      } else if (fileExtension === "json") {
-        console.log("jsonLD");
-        console.log("sssom: work in progres");
-
-        // sink = await jsonld({
-        //   prefixes: {
-        //     schema,
-        //     dcterms,
-        //     foaf,
-        //     rdfs,
-        // skos
-        //   },
-        // });
-
-        runExportFlag = false;
-      } else if (fileExtension === "sssom") {
-        console.log("sssom: work in progres");
-        // sink = await jsonld({
-        //   prefixes: {
-        //     schema,
-        //     dcterms,
-        //     foaf,
-        //     rdfs,
-        // skos
-        //   },
-        // });
-
-        runExportFlag = false;
-      }
-
-      if (runExportFlag) {
-        const streamtest = Readable.from(input);
-        console.log("stream", streamtest);
-
-        console.log("Try to create a stream with sink");
-        const stream = await sink.import(Readable.from(input));
-
-        let content = await getStream(stream);
-        console.log("Content created", content);
-        this.downloadMappingExport(content, fileExtension);
-      }
-      console.groupEnd();
-    },
 
     // Load
     loadOntology(event, position) /**/ {
@@ -1021,6 +505,7 @@ export default {
       console.groupEnd();
     },
 
+    // TODO: remove bevor beta
     async testFKT() {
       return "ack";
     },
@@ -1102,13 +587,7 @@ export default {
       // return null; // null if no one child or [children...]
     },
 
-    // TODO: Reduce after split
-    loadMappingTable(event) {
-      /*
-          Here you can load a mapping table as a CSV, RDF(XML) or a turtle file
-      */
-      console.group("loadMappingTable, event:", event);
-
+    loadMappingTable(event) /**OK */ {
       let file = event.target.files[0];
       let fileExtension = event.target.files[0].name
         .split(".")
@@ -1122,39 +601,14 @@ export default {
           fileText: e.target.result,
           fileExtension: fileExtension,
         });
-
-        // TODO: remove after split
-        // this.mappingfile = {
-        //   result: e.target.result,
-        //   fileExtension: fileExtension,
-        // };
-
-        // CSV
-        if (this.mappingtableExtension === "csv") {
-          //
-        }
-
-        // RDF(XML)
-        else if (
-          this.mappingtableExtension === "rdf" ||
-          this.mappingtableExtension === "xml" ||
-          this.mappingtableExtension === "ttl" ||
-          this.mappingtableExtension === "sssom"
-        ) {
-          //
-        } else {
-          // TODO: Error
-        }
       };
 
       // Read file
       reader.readAsText(file);
-
-      console.groupEnd();
     },
 
     // Mapping interactions
-    addMapping() {
+    addMapping() /**OK */ {
       /*
       Here you add a selected mapping config to the mapping table
   */
@@ -1176,13 +630,14 @@ export default {
               .getElementsByTagName("label")[0].innerText;
 
             value = {
-              left: left.replace("_source", ""),
-              right: right.replace("_target", ""),
+              left: this.cleanSuffix(left),
+              right: this.cleanSuffix(right),
               sourceTitle: sourceTitle,
               targetTitle: targetTitle,
               relation: this.dropdownItems[this.dropdownSelectedItem],
               comment: "",
             };
+
             this.addMappingItem(value);
           }
         }
@@ -1200,6 +655,7 @@ export default {
     },
 
     // Tree interactions
+    // TODO: remove after split
     selectValue() {
       /*
           Here you check current selection of the ontologies and
@@ -1233,6 +689,7 @@ export default {
       // console.groupEnd();
     },
 
+    // TODO: remove after split
     resetArrows() {
       // console.group("resetArrows");
       this.tree.value.source = [];
@@ -1302,7 +759,6 @@ export default {
     },
 
     // TODO: remove after split
-
     updateHeight() {
       var clearMyInterval = (param = this.intervalPerformance) =>
         clearInterval(param);
@@ -1321,22 +777,16 @@ export default {
     },
 
     // Helper
-    cleanSuffix(input) {
+    cleanSuffix(input) /**OK */ {
       return input.replace("_source", "").replace("_target", "");
     },
 
-    showSecondStep() {
-      console.group("showSecondStep");
-
-      this.openCloseSecondStepView = true;
-
-      console.log("this", this);
-      console.log("this.$", this.$);
-      console.groupEnd();
+    showSecondStep() /**OK */ {
+      this.openCloseSecondStepView = "open";
     },
   },
 
-  computed: /* TODO: remove after split */ {
+  computed: {
     // Filenames
     hasMappingFileName() {
       return this.mappingtableFilename != "" ? true : false;
@@ -1406,6 +856,7 @@ export default {
     //   callback(this.tree);
     // }, 2000);
   },
+
   watch: {
     queueCount: {
       handler(newValue) {
@@ -1423,7 +874,7 @@ export default {
 .second-step {
   position: absolute;
   top: 20%;
-  right: 10%;
+  left: 10%;
   width: 80%;
   height: auto;
   min-height: 20%;
