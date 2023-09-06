@@ -41,6 +41,10 @@
   </form>
 </template>
 
+<script setup>
+import { mapMutations, mapGetters } from "vuex";
+</script>
+
 <script>
 export default {
   name: "TheExport",
@@ -57,8 +61,14 @@ export default {
     };
   },
 
+  computed: {
+    ...mapGetters({ getMappingtable: "mappingtable/getMappingtable" }),
+  },
+
   methods: {
-    downloadMappingExport(txtContent, fileExtension) {
+    ...mapMutations({}),
+
+    downloadMappingExport(txtContent, fileExtension) /**OK */ {
       var exportElement = document.createElement("a");
       exportElement.href =
         "data:text/csv;charset=utf-8," + encodeURIComponent(txtContent);
@@ -68,7 +78,7 @@ export default {
       exportElement.click();
     },
 
-    exportMapping() {
+    exportMapping() /**OK */ {
       if (this.fileExtension === "csv") {
         this.exportCSV();
       } else if (this.fileExtension == "sssom") {
@@ -380,20 +390,18 @@ export default {
 
       console.groupEnd();
     },*/
-    /*
-    exportCSV() {
-      console.group("exportCSV");
 
+    exportCSV() /**OK */ {
       var currentState = [];
-      for (var idxSource in this.mappingtable) {
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
+      for (var idxSource in this.getMappingtable) {
+        for (var idxTarget of Object.keys(this.getMappingtable[idxSource])) {
           currentState.push([
-            this.mappingtable[idxSource][idxTarget]["relation"],
-            this.mappingtable[idxSource][idxTarget]["sourceTitle"],
+            this.getMappingtable[idxSource][idxTarget]["relation"],
+            this.getMappingtable[idxSource][idxTarget]["sourceTitle"],
             idxSource,
-            this.mappingtable[idxSource][idxTarget]["targetTitle"],
+            this.getMappingtable[idxSource][idxTarget]["targetTitle"],
             idxTarget,
-            this.mappingtable[idxSource][idxTarget]["comment"],
+            this.getMappingtable[idxSource][idxTarget]["comment"],
           ]);
         }
       }
@@ -405,9 +413,8 @@ export default {
       });
 
       this.downloadMappingExport(csv, "csv");
+    },
 
-      console.groupEnd();
-    },*/
     /*
     async exportRDF(fileExtension) {
       console.group(`exportRDF as a ${fileExtension}`);
