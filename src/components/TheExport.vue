@@ -69,17 +69,11 @@ export default {
     },
 
     exportMapping() {
-      console.group("exportMapping");
-
-      if (this.dropdownExportFormatItem > 0) {
-        if (this.dropdownExportFormatItem == 1) {
-          this.exportCSV();
-        } else if (this.dropdownExportFormatItem == 5) {
-          this.exportSSSOM();
-        } else
-          this.exportRDF(this.dropdownExtension[this.dropdownExportFormatItem]);
-      }
-      console.groupEnd();
+      if (this.fileExtension === "csv") {
+        this.exportCSV();
+      } else if (this.fileExtension == "sssom") {
+        this.exportSSSOM();
+      } else this.exportRDF(this.fileExtension);
     },
     /*
     async exportSSSOM() {

@@ -272,7 +272,7 @@ export default {
   data() {
     return {
       intervalPerformance: false,
-      openCloseSecondStepView: "open", // this is the export component. Use 'open' or 'close'
+      openCloseSecondStepView: "close", // this is the export component. Use 'open' or 'close'
 
       sourceFilename: "",
       targetFilename: "",
@@ -782,7 +782,12 @@ export default {
     },
 
     showSecondStep() /**OK */ {
-      this.openCloseSecondStepView = "open";
+      // if (this.dropdownExportFormatItem > 0) {
+      //   this.openCloseSecondStepView = "open";
+      // }
+
+      this.openCloseSecondStepView =
+        this.dropdownExportFormatItem > 0 ? "open" : "close";
     },
   },
 
