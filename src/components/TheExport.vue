@@ -414,93 +414,67 @@ export default {
       this.downloadMappingExport(csv, "csv");
     },
 
-    /*
     async exportRDF(fileExtension) {
       console.group(`exportRDF as a ${fileExtension}`);
+
+      // In the following loop this function is used to create new labels AND classes without duplicating them
+      const setNewClassLabel = (varName) => {
+        // varName is "idxSource" or "idxTarget" only
+
+        const rowElement = eval(varName);
+        const cleanElement = this.cleanSuffix(rowElement);
+        const title = varName === "idxSource" ? "sourceTitle" : "targetTitle";
+
+        if (!labelReady.includes(rowElement)) {
+          input.push(
+            rdf.quad(
+              rdf.namedNode("owl:class"),
+              rdf.namedNode("id"),
+              rdf.literal(`${cleanElement}`)
+            )
+          );
+          //   // Create new label
+          input.push(
+            rdf.quad(
+              rdf.namedNode(`${cleanElement}`),
+              rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
+              rdf.literal(this.getMappingtable[idxSource][idxTarget][title])
+            )
+          );
+          labelReady.push(rowElement);
+        }
+      };
 
       var input = [];
       var labelReady = []; // To prevent doubling
 
-      for (var idxSource in this.mappingtable) {
-        // Clean data
-        var clean_idxSource = this.cleanSuffix(idxSource);
+      for (var idxSource in this.getMappingtable) {
+        for (var idxTarget of Object.keys(this.getMappingtable[idxSource])) {
+          setNewClassLabel("idxSource");
+          setNewClassLabel("idxTarget");
 
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
-          // Label source
+          // TODO check for prefix and correctness
+          input.push(
+            rdf.quad(
+              rdf.namedNode(`${idxSource}`),
+              rdf.namedNode(
+                this.getMappingtable[idxSource][idxTarget]["relation"]
+              ),
+              rdf.namedNode(`${idxTarget}`)
+            )
+          );
 
-          // Clean data
-          var clean_idxTarget = this.cleanSuffix(idxTarget);
-
-          if (!labelReady.includes(idxSource)) {
-            input.push(
-              rdf.quad(
-                rdf.namedNode("owl:class"),
-                rdf.namedNode("id"),
-                rdf.literal(`${clean_idxSource}`)
+          input.push(
+            rdf.quad(
+              rdf.namedNode(`${idxSource}`),
+              rdf.namedNode(`${idxTarget}`),
+              rdf.literal(
+                "mes:" + '"1.0"^^<http://www.w3.org/2001/XMLSchema#float>'
               )
-            );
-            //   // Create new label
-            input.push(
-              rdf.quad(
-                rdf.namedNode(`${clean_idxSource}`),
-                rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
-                rdf.literal(
-                  this.mappingtable[idxSource][idxTarget]["sourceTitle"]
-                )
-              )
-            );
-            labelReady.push(idxSource);
-          }
-          // // Label Target
-          if (!labelReady.includes(idxTarget)) {
-            // Check namedNodes
-            input.push(
-              rdf.quad(
-                rdf.namedNode("owl:class"),
-                rdf.namedNode("id"),
-                rdf.literal(`${clean_idxTarget}`)
-              )
-            );
-            // Create new label
-            input.push(
-              rdf.quad(
-                rdf.namedNode(`${clean_idxTarget}`),
-                rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
-                rdf.literal(
-                  this.mappingtable[idxSource][idxTarget]["targetTitle"]
-                )
-              )
-            );
-            labelReady.push(idxTarget);
-          }
-
-          // TODO
-          // input.push(
-          //   rdf.quad(
-          //     rdf.namedNode(`${idxSource}`),
-          //     rdf.namedNode(
-          //       // TODO: check prefix
-          //       this.mappingtable[idxSource][idxTarget]["relation"]
-          //       // "TEST_123"
-          //     ),
-          //     rdf.namedNode(`${idxTarget}`)
-          //   )
-          // );
-
-          // input.push(
-          //   rdf.quad(
-          //     rdf.namedNode(`${idxSource}`),
-
-          //     rdf.namedNode(`${idxTarget}`),
-          //     rdf.literal(
-          //       // TODO: check that
-          //       "mes:" + '"1.0"^^<http://www.w3.org/2001/XMLSchema#float>'
-          //     )
-          //   )
-          // );
+            )
+          );
         }
       }
-      console.log(input);
 
       const { schema, dcterms, foaf, rdfs, skos } = prefixes;
       var sink;
@@ -572,7 +546,7 @@ export default {
         this.downloadMappingExport(content, fileExtension);
       }
       console.groupEnd();
-    },*/
+    },
 
     // Helper
     cleanSuffix(input) /**OK */ {
