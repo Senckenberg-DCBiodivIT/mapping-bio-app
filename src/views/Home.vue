@@ -2,10 +2,7 @@
   <TheMessenger />
 
   <!-- mappping table, CSV, RDF projection -->
-  <TheMappingtable
-    :externalMappingTable="mappingfile"
-    @ackNewMapping="newMappingRow = []"
-  />
+  <TheMappingtable />
 
   <!-- Buttons for mapings (choose, show and export) 
   TODO: an own component or inline? -->
@@ -88,6 +85,8 @@
   <!-- <br />
   <hr /> -->
   <!-- Debug END -->
+
+  <!-- <TheTreeStructure /> -->
 
   <div class="block">
     <!-- TODO: Component mapping table control? -->
@@ -210,64 +209,24 @@
     </div>
   </div>
 
-  <div class="second-step" v-if="openCloseSecondStepView">
-    <form class="box">
-      <p class="title is-6 has-text-right">
-        V {{ secondStepData.versionMapper }}
-      </p>
-      <div class="field">
-        <label class="label">Author</label>
-        <div class="control">
-          <input class="input" type="text" v-model="secondStepData.author" />
-        </div>
-      </div>
-      <div class="field">
-        <label class="label">Mapping set title</label>
-        <div class="control">
-          <input
-            class="input"
-            type="text"
-            v-model="secondStepData.mappingSetTitle"
-          />
-        </div>
-      </div>
-
-      <div class="field">
-        <label class="label">Comment</label>
-        <div class="control">
-          <textarea
-            class="textarea"
-            rows="2"
-            v-model="secondStepData.comment"
-          />
-        </div>
-      </div>
-
-      <div class="field">
-        <label class="label">License</label>
-        <div class="control">
-          <input class="input" type="text" v-model="secondStepData.license" />
-        </div>
-      </div>
-
-      <div class="columns">
-        <div class="column has-text-centered">
-          <o-button variant="warning" @click="openCloseSecondStepView = false"
-            >Cancel</o-button
-          >
-        </div>
-        <div class="column has-text-centered">
-          <o-button variant="primary" @click="exportMapping">Download</o-button>
-        </div>
-      </div>
-    </form>
-  </div>
+  <TheExport
+    class="second-step"
+    @openClose="
+      (value) => {
+        openCloseSecondStepView = value;
+      }
+    "
+    :fileExtension="dropdownExtension[dropdownExportFormatItem]"
+    v-if="openCloseSecondStepView == 'open'"
+  />>
 </template>
 
 <script setup>
 // Own components
 import TheMessenger from "@/components/TheMessenger";
 import TheMappingtable from "@/components/TheMappingtable";
+import TheTreeStructure from "@/components/TheTreeStructure";
+import TheExport from "@/components/TheExport";
 
 // import vuex mutations
 import { mapMutations } from "vuex";
@@ -283,25 +242,11 @@ import LeaderLine from "leader-line-new";
 
 // RDF
 import rdfParser from "rdf-parse";
-import rdf from "@rdfjs/data-model";
 
 // Quadstore & Co
 import { Engine } from "quadstore-comunica";
 import { storeStream } from "rdf-store-stream";
 import { query } from "@/components/query";
-
-// Export RDF
-import { Readable } from "readable-stream";
-
-import prefixes from "@zazuko/rdf-vocabularies/prefixes";
-
-import {
-  turtle,
-  rdfXml,
-  jsonld,
-} from "@rdfjs-elements/formats-pretty/serializers";
-
-import getStream from "get-stream";
 </script>
 
 <script>
@@ -312,20 +257,12 @@ export default {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
     return {
-      test: {},
       intervalPerformance: false,
-
-      message: [], //Format: ["text", "kind"]
-
-      // TODO: remove after split
-      openCloseSecondStepView: false, // false: closed, true: open
-
-      mappingtable: [],
-      mappingfile: {}, //  {result, fileExtension}
-      newMappingRow: [],
+      openCloseSecondStepView: "close", // this is the export component. Use 'open' or 'close'
 
       sourceFilename: "",
       targetFilename: "",
+      mappingtableFilename: "",
 
       arrows: [],
 
@@ -352,15 +289,6 @@ export default {
         "skos:narrowMatch",
         "skos:relatedMatch",
       ],
-      dropdownItemsMatching: {
-        // TODO: ask Claus about...
-        // "skos:mappingRelation",
-        "skos:closeMatch": { csv: "skos:closeMatch" },
-        "skos:exactMatch": { csv: "skos:exactMatch" },
-        "skos:broadMatch": { csv: "skos:broadMatch" },
-        "skos:narrowMatch": { csv: "skos:narrowMatch" },
-        "skos:relatedMatch": { csv: "skos:relatedMatch" },
-      },
 
       dropdownExportFormat: [
         "Export",
@@ -372,536 +300,15 @@ export default {
       ],
       dropdownExtension: ["", "csv", "rdf", "ttl", "json", "sssom"],
       dropdownExportFormatItem: 0,
-
-      secondStepData: {
-        versionMapper: process.env.VUE_APP_VERSION,
-        author: "",
-        mappingSetTitle: "",
-        comment: "",
-        license: "",
-      },
     };
   },
 
   methods: {
-    ...mapMutations({ newMessage: "messenger/newMessage" }),
-
-    // Exports
-    downloadMappingExport(txtContent, fileExtension) {
-      var exportElement = document.createElement("a");
-      exportElement.href =
-        "data:text/csv;charset=utf-8," + encodeURIComponent(txtContent);
-      exportElement.target = "_blank";
-
-      exportElement.download = `Mapping_Table.${fileExtension}`;
-      exportElement.click();
-    },
-
-    exportMapping() {
-      console.group("exportMapping");
-
-      if (this.dropdownExportFormatItem > 0) {
-        if (this.dropdownExportFormatItem == 1) {
-          this.exportCSV();
-        } else if (this.dropdownExportFormatItem == 5) {
-          this.exportSSSOM();
-        } else
-          this.exportRDF(this.dropdownExtension[this.dropdownExportFormatItem]);
-      }
-      console.groupEnd();
-    },
-
-    async exportSSSOM() {
-      // Export SSSOM here as a json-ld for Cordra and other purposes
-      console.group("exportSSSOM");
-
-      var input = [];
-      var mappingSet = [];
-      var singleMappings = [];
-      var singleMappingsIDs = [];
-
-      // Clean data
-      for (var idxSource in this.mappingtable) {
-        var clean_idxSource = this.cleanSuffix(idxSource);
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
-          var clean_idxTarget = this.cleanSuffix(idxTarget);
-
-          // Create mapping node
-          input.push(
-            rdf.quad(
-              rdf.namedNode(clean_idxSource),
-              rdf.namedNode(
-                this.mappingtable[idxSource][idxTarget]["relation"]
-              ),
-              rdf.namedNode(clean_idxTarget)
-            )
-          );
-
-          // Discribe mapping
-          let singleMappingsID = `${clean_idxSource}_${clean_idxTarget}`;
-          singleMappingsIDs.push(singleMappingsID);
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("rdf:type"),
-              rdf.namedNode("owl:Axiom")
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:comment"),
-              rdf.literal(this.mappingtable[idxSource][idxTarget]["comment"])
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:confidence"),
-              rdf.literal("empty here") // TODO: link data here
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(`${clean_idxSource}_${clean_idxTarget}`),
-              rdf.namedNode("sssom:last_updated"),
-              rdf.literal(new Date().toUTCString())
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:mapping_cardinality"),
-              rdf.literal("empty here") // TODO: check and put here (1:1 or 1:n. Any other comopsition is not available)
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:mapping_date"),
-              rdf.literal("empty here") // TODO: Use the creation date here
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:mappings"),
-              rdf.literal(`[${clean_idxSource}, ${clean_idxTarget}`)
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:object_id"),
-              rdf.literal(clean_idxTarget)
-            )
-          );
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:object_label"),
-              rdf.literal("Put label here") // TODO: Put label here
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:predicate_id"),
-              rdf.literal(this.mappingtable[idxSource][idxTarget]["relation"])
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:subject_id"),
-              rdf.literal(clean_idxSource)
-            )
-          );
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:subject_label"),
-              rdf.literal("Put label here") // TODO: Put label here
-            )
-          );
-        }
-      }
-
-      // Create mapping set here
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("rdf:type"),
-          rdf.literal("sssom:MappingSet")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:author_label"),
-          rdf.literal(this.secondStepData.author)
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_tool"),
-          rdf.literal("mapping.bio")
-        )
-      );
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_tool_version"),
-          rdf.literal(this.secondStepData.versionMapper)
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_provider"),
-          rdf.literal("https://mapping.bio")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:comment"),
-          rdf.literal(this.secondStepData.comment)
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:imports"),
-          rdf.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:last_updated"),
-          rdf.literal(new Date().toUTCString())
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:license"),
-          rdf.literal(this.secondStepData.license)
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_date"),
-          rdf.literal(new Date().toUTCString()) // TODO: Use the creation date here, if there is an available
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_registry_description"),
-          rdf.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_registry_id"),
-          rdf.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_registry_title"),
-          rdf.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_set_id"),
-          rdf.literal("") // TODO: a bigger part to do. Use the old one if available
-        )
-      );
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_set_source"),
-          rdf.literal("") // TODO: open discussion
-        )
-      );
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_set_title"),
-          rdf.literal(this.secondStepData.mappingSetTitle)
-        )
-      );
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_set_version"),
-          rdf.literal("") // TODO: Format?
-        )
-      );
-
-      // include single mappings
-      for (var item of singleMappingsIDs) {
-        mappingSet.push(
-          rdf.quad(
-            rdf.blankNode("MappingSet"),
-            rdf.namedNode("sssom:mappings"),
-            rdf.blankNode(item)
-          )
-        );
-      }
-
-      const { schema, dcterms, foaf, rdfs, skos, owl } = prefixes;
-      const sssom = "https://w3id.org/sssom/";
-
-      var runExportFlag = true;
-
-      var sink = await turtle({
-        // var sink = await rdfXml({
-        // var sink = await jsonld({
-        prefixes: {
-          schema,
-          dcterms,
-          foaf,
-          rdfs,
-          skos,
-          owl,
-          sssom,
-        },
-      });
-      // console.log("sink", sink);
-
-      if (runExportFlag) {
-        var exportArray = input.concat(mappingSet).concat(singleMappings);
-        console.log("exportArray", exportArray);
-
-        console.log("Try to create a stream with sink");
-        const stream = await sink.import(Readable.from(exportArray));
-
-        let content = await getStream(stream);
-        console.log("Content created", content);
-        this.downloadMappingExport(content, "sssom"); // TODO: set json later
-      }
-
-      console.groupEnd();
-    },
-
-    exportCSV() {
-      console.group("exportCSV");
-
-      var currentState = [];
-      for (var idxSource in this.mappingtable) {
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
-          currentState.push([
-            this.mappingtable[idxSource][idxTarget]["relation"],
-            this.mappingtable[idxSource][idxTarget]["sourceTitle"],
-            idxSource,
-            this.mappingtable[idxSource][idxTarget]["targetTitle"],
-            idxTarget,
-            this.mappingtable[idxSource][idxTarget]["comment"],
-          ]);
-        }
-      }
-      var csv = "";
-
-      currentState.forEach(function (row) {
-        csv += row.join(",");
-        csv += "\n";
-      });
-
-      this.downloadMappingExport(csv, "csv");
-
-      console.groupEnd();
-    },
-
-    async exportRDF(fileExtension) {
-      console.group(`exportRDF as a ${fileExtension}`);
-
-      var input = [];
-      var labelReady = []; // To prevent doubling
-
-      for (var idxSource in this.mappingtable) {
-        // Clean data
-        var clean_idxSource = this.cleanSuffix(idxSource);
-
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
-          // Label source
-
-          // Clean data
-          var clean_idxTarget = this.cleanSuffix(idxTarget);
-
-          if (!labelReady.includes(idxSource)) {
-            input.push(
-              rdf.quad(
-                rdf.namedNode("owl:class"),
-                rdf.namedNode("id"),
-                rdf.literal(`${clean_idxSource}`)
-              )
-            );
-            //   // Create new label
-            input.push(
-              rdf.quad(
-                rdf.namedNode(`${clean_idxSource}`),
-                rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
-                rdf.literal(
-                  this.mappingtable[idxSource][idxTarget]["sourceTitle"]
-                )
-              )
-            );
-            labelReady.push(idxSource);
-          }
-          // // Label Target
-          if (!labelReady.includes(idxTarget)) {
-            // Check namedNodes
-            input.push(
-              rdf.quad(
-                rdf.namedNode("owl:class"),
-                rdf.namedNode("id"),
-                rdf.literal(`${clean_idxTarget}`)
-              )
-            );
-            // Create new label
-            input.push(
-              rdf.quad(
-                rdf.namedNode(`${clean_idxTarget}`),
-                rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
-                rdf.literal(
-                  this.mappingtable[idxSource][idxTarget]["targetTitle"]
-                )
-              )
-            );
-            labelReady.push(idxTarget);
-          }
-
-          // TODO
-          // input.push(
-          //   rdf.quad(
-          //     rdf.namedNode(`${idxSource}`),
-          //     rdf.namedNode(
-          //       // TODO: check prefix
-          //       this.mappingtable[idxSource][idxTarget]["relation"]
-          //       // "TEST_123"
-          //     ),
-          //     rdf.namedNode(`${idxTarget}`)
-          //   )
-          // );
-
-          // input.push(
-          //   rdf.quad(
-          //     rdf.namedNode(`${idxSource}`),
-
-          //     rdf.namedNode(`${idxTarget}`),
-          //     rdf.literal(
-          //       // TODO: check that
-          //       "mes:" + '"1.0"^^<http://www.w3.org/2001/XMLSchema#float>'
-          //     )
-          //   )
-          // );
-        }
-      }
-      console.log(input);
-
-      const { schema, dcterms, foaf, rdfs, skos } = prefixes;
-      var sink;
-      var runExportFlag = false;
-
-      if (fileExtension === "ttl") {
-        sink = await turtle({
-          prefixes: {
-            schema,
-            dcterms,
-            foaf,
-            rdfs,
-            skos,
-          },
-        });
-
-        runExportFlag = true;
-      } else if (fileExtension === "rdf") {
-        sink = await rdfXml({
-          prefixes: {
-            schema,
-            dcterms,
-            foaf,
-            rdfs,
-            skos,
-          },
-        });
-
-        runExportFlag = true;
-      } else if (fileExtension === "json") {
-        console.log("jsonLD");
-        console.log("sssom: work in progres");
-
-        // sink = await jsonld({
-        //   prefixes: {
-        //     schema,
-        //     dcterms,
-        //     foaf,
-        //     rdfs,
-        // skos
-        //   },
-        // });
-
-        runExportFlag = false;
-      } else if (fileExtension === "sssom") {
-        console.log("sssom: work in progres");
-        // sink = await jsonld({
-        //   prefixes: {
-        //     schema,
-        //     dcterms,
-        //     foaf,
-        //     rdfs,
-        // skos
-        //   },
-        // });
-
-        runExportFlag = false;
-      }
-
-      if (runExportFlag) {
-        const streamtest = Readable.from(input);
-        console.log("stream", streamtest);
-
-        console.log("Try to create a stream with sink");
-        const stream = await sink.import(Readable.from(input));
-
-        let content = await getStream(stream);
-        console.log("Content created", content);
-        this.downloadMappingExport(content, fileExtension);
-      }
-      console.groupEnd();
-    },
+    ...mapMutations({
+      newMessage: "messenger/newMessage",
+      setFile: "mappingtable/setFile",
+      addMappingItem: "mappingtable/addMappingItem",
+    }),
 
     // Load
     loadOntology(event, position) /**/ {
@@ -1084,12 +491,13 @@ export default {
       console.groupEnd();
     },
 
+    // TODO: remove bevor beta
     async testFKT() {
       return "ack";
     },
 
     async loadOntologyChild(id, position) {
-      console.group("loadOntologyChild", id);
+      // console.group("loadOntologyChild", id);
       var nodeChildren = [];
       var query = "";
 
@@ -1151,7 +559,7 @@ export default {
           }
         });
         bindingsStream.on("end", () => {
-          console.log("nodeChildren .end", nodeChildren);
+          // console.log("nodeChildren .end", nodeChildren);
           this.queueCount--;
 
           // return nodeChildren; // null if no one child or [children...]
@@ -1161,17 +569,10 @@ export default {
         return nodeChildren;
       }
 
-      console.groupEnd();
-      // return null; // null if no one child or [children...]
+      // console.groupEnd();
     },
 
-    // TODO: Reduce after split
-    loadMappingTable(event) {
-      /*
-          Here you can load a mapping table as a CSV, RDF(XML) or a turtle file
-      */
-      console.group("loadMappingTable, event:", event);
-
+    loadMappingTable(event) /**OK */ {
       let file = event.target.files[0];
       let fileExtension = event.target.files[0].name
         .split(".")
@@ -1181,37 +582,18 @@ export default {
       let reader = new FileReader();
 
       reader.onload = async (e) => {
-        this.mappingfile = {
-          result: e.target.result,
+        this.setFile({
+          fileText: e.target.result,
           fileExtension: fileExtension,
-        };
-
-        // CSV
-        if (this.mappingtableExtension === "csv") {
-          //
-        }
-
-        // RDF(XML)
-        else if (
-          this.mappingtableExtension === "rdf" ||
-          this.mappingtableExtension === "xml" ||
-          this.mappingtableExtension === "ttl" ||
-          this.mappingtableExtension === "sssom"
-        ) {
-          //
-        } else {
-          // TODO: Error
-        }
+        });
       };
 
       // Read file
       reader.readAsText(file);
-
-      console.groupEnd();
     },
 
     // Mapping interactions
-    addMapping() {
+    addMapping() /**OK */ {
       /*
       Here you add a selected mapping config to the mapping table
   */
@@ -1222,6 +604,8 @@ export default {
       ) {
         for (var left of this.tree.value.source) {
           for (var right of this.tree.value.target) {
+            var value = {};
+
             var sourceTitle = document
               .querySelectorAll(`[data-id='${left}']`)[0]
               .getElementsByTagName("label")[0].innerText;
@@ -1230,22 +614,20 @@ export default {
               .querySelectorAll(`[data-id='${right}']`)[0]
               .getElementsByTagName("label")[0].innerText;
 
-            if (this.mappingtable[left] == undefined) {
-              this.mappingtable[left] = {};
-            }
-
-            this.mappingtable[left][right] = {
+            value = {
+              left: this.cleanSuffix(left),
+              right: this.cleanSuffix(right),
               sourceTitle: sourceTitle,
               targetTitle: targetTitle,
-              relation:
-                this.dropdownItemsMatching[
-                  this.dropdownItems[this.dropdownSelectedItem]
-                ].csv, // TODO: set the selected relation, but current we have different values in CSV and RDF...
+              relation: this.dropdownItems[this.dropdownSelectedItem],
               comment: "",
             };
+
+            this.addMappingItem(value);
           }
         }
-        // this.refreshMappingtableUI();
+
+        // TODO: use watcher after split
         this.resetArrows();
       }
 
@@ -1257,91 +639,8 @@ export default {
       console.groupEnd();
     },
 
-    // updateMapping(id, param) {
-    //   /*
-    //   Here you can update the mapping table data after a change in the UI
-    //   like "relation" or "comment"
-    //   */
-
-    //   id--; // Table-widget counts from 1 to n
-
-    //   console.group("updateMapping", id, param);
-
-    //   // Get updated value
-    //   var updatedValue = window.mappingDataTable.getCtrlValue(param, id);
-    //   var mappingtableSourceID = window.mappingDataTable.getCtrlValue(
-    //     "sourceLink",
-    //     id
-    //   );
-    //   var mappingtableTargetID = window.mappingDataTable.getCtrlValue(
-    //     "targetLink",
-    //     id
-    //   );
-
-    //   // Set updated value
-    //   this.mappingtable[mappingtableSourceID][mappingtableTargetID][param] =
-    //     updatedValue;
-
-    //   // Update the tree view
-    //   this.showArrowFromMappingtable(id + 1); // This function works with internal table-widget index. Table counts from 1 to n
-
-    //   console.groupEnd();
-    // },
-
-    // TODO: remove after split
-    refreshMappingtableUI() {
-      /*
-          Here you can manually refresh the UI state based on the current mapping state like
-          - a loaded CSV
-          - a loaded RDF with XML notation
-          - a changed state after an activity from user
-            - create a new
-            - or delete a relation between two ontologies
-      */
-
-      console.group("refreshMappingtableUI");
-      var currentState = [];
-      console.log("this.mappingtable", this.mappingtable);
-
-      for (var idxSource in this.mappingtable) {
-        console.log("idxSource", idxSource);
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
-          currentState.push({
-            relation: this.mappingtable[idxSource][idxTarget]["relation"]
-              .replaceAll("(", "")
-              .replaceAll(")", ""),
-            sourceTitle: this.mappingtable[idxSource][idxTarget]["sourceTitle"],
-            sourceLink: idxSource,
-            targetTitle: this.mappingtable[idxSource][idxTarget]["targetTitle"],
-            targetLink: idxTarget,
-            comment: this.mappingtable[idxSource][idxTarget]["comment"],
-          });
-        }
-      }
-
-      // if (currentState.length == 0) {
-      //   currentState.push({
-      //     relation: "",
-      //     sourceTitle: "",
-      //     sourceLink: "",
-      //     targetTitle: "",
-      //     targetLink: "",
-      //     comment: "",
-      //   });
-      // }
-      console.log("currentState", currentState);
-
-      if (currentState.length == 0) {
-        window.mappingDataTable.load([[]]);
-        window.mappingDataTable.removeRow(0);
-      } else {
-        window.mappingDataTable.load(currentState);
-      }
-
-      console.groupEnd();
-    },
-
     // Tree interactions
+    // TODO: remove after split
     selectValue() {
       /*
           Here you check current selection of the ontologies and
@@ -1375,6 +674,7 @@ export default {
       // console.groupEnd();
     },
 
+    // TODO: remove after split
     resetArrows() {
       // console.group("resetArrows");
       this.tree.value.source = [];
@@ -1389,6 +689,7 @@ export default {
       // console.groupEnd();
     },
 
+    // TODO: remove after split
     showArrowFromMappingtable(uniqueIndex) {
       // console.group("showArrowFromMappingtable", uniqueIndex);
 
@@ -1407,6 +708,7 @@ export default {
       // console.groupEnd();
     },
 
+    // TODO: remove after split
     showAllArrowsFromMappingtable() {
       console.group("showAllArrowsFromMappingtable");
       this.resetArrows();
@@ -1441,6 +743,7 @@ export default {
       console.groupEnd();
     },
 
+    // TODO: remove after split
     updateHeight() {
       var clearMyInterval = (param = this.intervalPerformance) =>
         clearInterval(param);
@@ -1459,22 +762,21 @@ export default {
     },
 
     // Helper
-    cleanSuffix(input) {
+    cleanSuffix(input) /**OK */ {
       return input.replace("_source", "").replace("_target", "");
     },
 
-    showSecondStep() {
-      console.group("showSecondStep");
+    showSecondStep() /**OK */ {
+      // if (this.dropdownExportFormatItem > 0) {
+      //   this.openCloseSecondStepView = "open";
+      // }
 
-      this.openCloseSecondStepView = true;
-
-      console.log("this", this);
-      console.log("this.$", this.$);
-      console.groupEnd();
+      this.openCloseSecondStepView =
+        this.dropdownExportFormatItem > 0 ? "open" : "close";
     },
   },
 
-  computed: /* TODO: remove after split */ {
+  computed: {
     // Filenames
     hasMappingFileName() {
       return this.mappingtableFilename != "" ? true : false;
@@ -1489,44 +791,19 @@ export default {
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   async mounted() /* TODO: remove after split */ {
-    console.log("mount");
-    // window.mappingDataTable = new AppendGrid({
-    //   element: document.getElementById("mapppingtableCSV"),
-    //   initRows: 0,
-    //   uiFramework: "bulma",
-    //   iconFramework: "default",
-    //   hideButtons: {
-    //     // Hide the move up and move down button on each row
-    //     moveUp: true,
-    //     moveDown: true,
-    //     insert: true,
-    //     append: true,
-    //     removeLast: true,
-    //   },
-    //   columns: this.mappingDataTableConfig,
-    //   sectionClasses: {
-    //     table: "is-narrow is-fullwidth",
-    //   },
-    // });
-    // this.refreshMappingtableUI();
-
+    // console.log("mount");
     // console.log("def tree");
-
     // this.tree = {
     //   value: { source: [], target: [] },
     //   options: {
     //     source: [
     //       { label: "leaf alternate placement", id: 1 },
     //       { label: "perianth color", id: 6 },
-
     //       { label: "fruit pilosity", id: 5 },
     //       { label: "whole plant lifestyle", id: 2 },
-
     //       { label: "leaf morphology", id: 3 },
-
     //       { label: "stamen morphology", id: 4 },
     //     ],
-
     //     target: [
     //       { label: "life cycle habit", id: 8 },
     //       { label: "fruit hairiness", id: 11 },
@@ -1539,26 +816,21 @@ export default {
     //   reloadKey: { source: 0, target: 0 }, // reload index for VUE reloads
     //   skos_flag: { source: false, target: false }, // we need to modify queries if it's a skos notation
     // };
-
     // function callback() {
     //   console.log("TEST");
     //   var allDivs = document.getElementsByTagName("*");
     //   var source = [1, 2, 3, 4, 5, 6];
     //   var target = [7, 8, 9, 10, 11, 12];
-
     //   for (var left in source) {
     //     var from = null,
     //       to = null;
-
     //     for (var singleDiv of allDivs) {
     //       console.log("left", source[left]);
-
     //       if (singleDiv.getAttribute("data-id") == source[left]) {
     //         from = singleDiv;
     //       } else if (singleDiv.getAttribute("data-id") == target[left]) {
     //         to = singleDiv;
     //       }
-
     //       if (from != null && to != null) {
     //         new LeaderLine(from, to);
     //         from = null;
@@ -1574,6 +846,7 @@ export default {
     //   callback(this.tree);
     // }, 2000);
   },
+
   watch: {
     queueCount: {
       handler(newValue) {
@@ -1591,7 +864,7 @@ export default {
 .second-step {
   position: absolute;
   top: 20%;
-  right: 10%;
+  left: 10%;
   width: 80%;
   height: auto;
   min-height: 20%;

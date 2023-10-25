@@ -38,6 +38,9 @@
 // Mapping table
 import AppendGrid from "jquery.appendgrid";
 
+// Store
+import { mapMutations, mapGetters } from "vuex";
+
 // RDF
 import rdfParser from "rdf-parse";
 
@@ -50,17 +53,13 @@ import { query } from "@/components/query";
 <script>
 export default {
   name: "TheMappingtable",
-  props: ["externalMappingTable"],
-  emit: ["ackNewMapping"],
   data() {
     return {
       query: query, // external stored queries for a better readability
 
       openCloseTableView: true, // false: closed, true: open
 
-      mappingtable: [],
-
-      rdfObj_engines_mapping: {},
+      rdfEngine: {},
 
       mappingDataTableConfig: [
         {
@@ -77,7 +76,7 @@ export default {
           ],
           events: {
             change: (e, that = this) => {
-              that.updateMapping(e.uniqueIndex, "relation");
+              that.updateMappingValue(e.uniqueIndex, "relation");
             },
           },
         },
@@ -144,14 +143,31 @@ export default {
               that.showArrowFromMappingtable(e.uniqueIndex);
             },
             change: (e, that = this) => {
-              that.updateMapping(e.uniqueIndex, "comment");
+              that.updateMappingValue(e.uniqueIndex, "comment");
             },
           },
         },
       ],
     };
   },
+
+  computed: {
+    ...mapGetters({
+      getFile: "mappingtable/getFile",
+      getMappingtable: "mappingtable/getMappingtable",
+    }),
+  },
+
   methods: {
+    ...mapMutations({
+      setMappingtable: "mappingtable/setMappingtable",
+      updateMapping: "mappingtable/updateMapping",
+    }),
+
+    showArrowFromMappingtable() {
+      // TODO
+    },
+
     refreshMappingtableUI() {
       /*
           Here you can manually refresh the UI state based on the current mapping state like
@@ -166,18 +182,20 @@ export default {
       var currentState = [];
       // console.log("this.mappingtable", this.mappingtable);
 
-      for (var idxSource in this.mappingtable) {
+      for (var idxSource in this.getMappingtable) {
         // console.log("idxSource", idxSource);
-        for (var idxTarget of Object.keys(this.mappingtable[idxSource])) {
+        for (var idxTarget of Object.keys(this.getMappingtable[idxSource])) {
           currentState.push({
-            relation: this.mappingtable[idxSource][idxTarget]["relation"]
+            relation: this.getMappingtable[idxSource][idxTarget]["relation"]
               .replaceAll("(", "")
               .replaceAll(")", ""),
-            sourceTitle: this.mappingtable[idxSource][idxTarget]["sourceTitle"],
+            sourceTitle:
+              this.getMappingtable[idxSource][idxTarget]["sourceTitle"],
             sourceLink: idxSource,
-            targetTitle: this.mappingtable[idxSource][idxTarget]["targetTitle"],
+            targetTitle:
+              this.getMappingtable[idxSource][idxTarget]["targetTitle"],
             targetLink: idxTarget,
-            comment: this.mappingtable[idxSource][idxTarget]["comment"],
+            comment: this.getMappingtable[idxSource][idxTarget]["comment"],
           });
         }
       }
@@ -194,7 +212,7 @@ export default {
       // console.groupEnd();
     },
 
-    updateMapping(id, param) {
+    updateMappingValue(id, param) /* TODO */ {
       /*
       Here you can update the mapping table data after a change in the UI
       like "relation" or "comment"
@@ -202,30 +220,35 @@ export default {
 
       id--; // Table-widget counts from 1 to n
 
-      console.group("updateMapping", id, param);
+      // console.group("updateMapping", id, param);
 
       // Get updated value
-      var updatedValue = window.mappingDataTable.getCtrlValue(param, id);
-      var mappingtableSourceID = window.mappingDataTable.getCtrlValue(
+      let updatedValue = window.mappingDataTable.getCtrlValue(param, id);
+      let mappingtableSourceID = window.mappingDataTable.getCtrlValue(
         "sourceLink",
         id
       );
-      var mappingtableTargetID = window.mappingDataTable.getCtrlValue(
+      let mappingtableTargetID = window.mappingDataTable.getCtrlValue(
         "targetLink",
         id
       );
 
       // Set updated value
-      this.mappingtable[mappingtableSourceID][mappingtableTargetID][param] =
-        updatedValue;
+      let value = {
+        mappingtableSourceID: mappingtableSourceID,
+        mappingtableTargetID: mappingtableTargetID,
+        param: param,
+        updatedValue: updatedValue,
+      };
+      console.log("updateMapping now");
+      this.updateMapping(value);
 
-      // TODO: rewrite => Update the tree view
-      // this.showArrowFromMappingtable(id + 1); // This function works with internal table-widget index. Table counts from 1 to n
-
-      console.groupEnd();
+      // console.groupEnd();
     },
 
     loadCSV(data) {
+      // console.group("Load CSV mapping table");
+
       /*
           Format mapping CSV:
           0 relation
@@ -247,29 +270,32 @@ export default {
           }
          }
          */
-
+      var mappingtable = [];
       var mappingtableRows = data.split("\n");
       mappingtableRows.pop();
       // console.log("mappingtableRows", mappingtableRows);
       for (var cell of mappingtableRows) {
         var cellInRow = cell.split(",");
-        if (this.mappingtable[cellInRow[2]] == undefined) {
-          this.mappingtable[cellInRow[2]] = {};
+        if (mappingtable[cellInRow[2]] == undefined) {
+          mappingtable[cellInRow[2]] = {};
         }
-        this.mappingtable[cellInRow[2]][cellInRow[4]] = {
+        mappingtable[cellInRow[2]][cellInRow[4]] = {
           sourceTitle: cellInRow[1],
           targetTitle: cellInRow[3],
           relation: cellInRow[0],
           comment: cellInRow[5],
         };
       }
-      this.refreshMappingtableUI();
+      this.setMappingtable(mappingtable);
+
+      // console.groupEnd();
     },
 
     async loadRDF(data) {
-      console.log("RDF (XML, TTL or SSSOM) selected");
+      console.log("Load RDF (XML, TTL or SSSOM) mapping table");
 
       var mimeType = "";
+      var mappingtable = [];
 
       if (data.fileExtension == "ttl" || data.fileExtension == "sssom") {
         // TODO: take care about sssom
@@ -280,9 +306,11 @@ export default {
         mimeType = "application/rdf+xml";
       }
 
+      console.log("mimeType", mimeType);
+
       // Reader definition
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const ontologyStream = require("streamify-string")(data.result);
+      const ontologyStream = require("streamify-string")(data.fileText);
 
       const quadStream = rdfParser.parse(ontologyStream, {
         contentType: mimeType,
@@ -290,9 +318,9 @@ export default {
       });
 
       const store = await storeStream(quadStream);
-      this.rdfObj_engines_mapping = new Engine(store);
+      this.rdfEngine = new Engine(store);
 
-      var bindingsStream = await this.rdfObj_engines_mapping.queryBindings(
+      var bindingsStream = await this.rdfEngine.queryBindings(
         this.query.testQuery
       );
       // ].queryBindings(this.query.mappingRow);
@@ -305,17 +333,15 @@ export default {
         // );
 
         if (
-          this.mappingtable[
-            bindings.entries.hashmap.node.children[0].value.value
-          ] == undefined
+          mappingtable[bindings.entries.hashmap.node.children[0].value.value] ==
+          undefined
         ) {
-          this.mappingtable[
-            bindings.entries.hashmap.node.children[0].value.value
-          ] = {};
+          mappingtable[bindings.entries.hashmap.node.children[0].value.value] =
+            {};
         }
-        this.mappingtable[
-          bindings.entries.hashmap.node.children[0].value.value
-        ][bindings.entries.hashmap.node.children[1].value.value] = {
+        mappingtable[bindings.entries.hashmap.node.children[0].value.value][
+          bindings.entries.hashmap.node.children[1].value.value
+        ] = {
           sourceTitle: "Enter a title for the CSV export here",
           targetTitle: "Enter a title for the CSV export here",
           relation: bindings.entries.hashmap.node.children[2].value.value,
@@ -324,15 +350,15 @@ export default {
       });
 
       bindingsStream.on("end", () => {
-        console.log("this.mappingtable", this.mappingtable);
+        console.log("mappingtable", mappingtable);
 
-        this.refreshMappingtableUI();
+        this.setMappingtable(mappingtable);
       });
     },
   },
 
   async mounted() {
-    console.log("mount mappingtable");
+    // console.log("mount mappingtable");
 
     window.mappingDataTable = new AppendGrid({
       element: document.getElementById("mapppingtable"),
@@ -352,14 +378,13 @@ export default {
         table: "is-narrow is-fullwidth",
       },
     });
-    this.refreshMappingtableUI();
   },
 
   watch: {
-    externalMappingTable: {
+    getFile: {
       handler(newData) {
         if (newData.fileExtension === "csv") {
-          this.loadCSV(newData.result);
+          this.loadCSV(newData.fileText);
         } else if (
           newData.fileExtension === "rdf" ||
           newData.fileExtension === "xml" ||
@@ -370,6 +395,12 @@ export default {
         } else {
           // TODO: create a warning message
         }
+      },
+      deep: true,
+    },
+    getMappingtable: {
+      handler() {
+        this.refreshMappingtableUI();
       },
       deep: true,
     },
