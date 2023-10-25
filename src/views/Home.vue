@@ -497,7 +497,7 @@ export default {
     },
 
     async loadOntologyChild(id, position) {
-      console.group("loadOntologyChild", id);
+      // console.group("loadOntologyChild", id);
       var nodeChildren = [];
       var query = "";
 
@@ -559,7 +559,7 @@ export default {
           }
         });
         bindingsStream.on("end", () => {
-          console.log("nodeChildren .end", nodeChildren);
+          // console.log("nodeChildren .end", nodeChildren);
           this.queueCount--;
 
           // return nodeChildren; // null if no one child or [children...]
@@ -569,8 +569,7 @@ export default {
         return nodeChildren;
       }
 
-      console.groupEnd();
-      // return null; // null if no one child or [children...]
+      // console.groupEnd();
     },
 
     loadMappingTable(event) /**OK */ {

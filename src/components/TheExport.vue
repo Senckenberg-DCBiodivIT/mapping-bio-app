@@ -1,3 +1,7 @@
+<!-- Here you go the "export" component with you create 
+the exported data and the file output.
+You can also enter the author, licence and other informations, if necessary. -->
+
 <template>
   <form class="box">
     <p class="title is-6 has-text-right">V {{ versionMapper }}</p>
@@ -418,7 +422,7 @@ export default {
       console.group(`exportRDF as a ${fileExtension}`);
 
       // In the following loop this function is used to create new labels AND classes without duplicating them
-      const setNewClassLabel = (varName) => {
+      /*const setNewClassLabel = (varName) => {
         // varName is "idxSource" or "idxTarget" only
 
         const rowElement = eval(varName);
@@ -426,13 +430,13 @@ export default {
         const title = varName === "idxSource" ? "sourceTitle" : "targetTitle";
 
         if (!labelReady.includes(rowElement)) {
-          input.push(
-            rdf.quad(
-              rdf.namedNode("owl:class"),
-              rdf.namedNode("id"),
-              rdf.literal(`${cleanElement}`)
-            )
-          );
+          // input.push(
+          //   rdf.quad(
+          //     rdf.namedNode("owl:class"),
+          //     rdf.namedNode("rdf:about"),
+          //     rdf.literal(`${cleanElement}`)
+          //   )
+          // );
           //   // Create new label
           input.push(
             rdf.quad(
@@ -443,36 +447,105 @@ export default {
           );
           labelReady.push(rowElement);
         }
-      };
+      };*/
 
-      var input = [];
-      var labelReady = []; // To prevent doubling
+      var mappingIndex = 2;
+      var input = [
+        rdf.quad(
+          rdf.blankNode(`genid1`),
+          rdf.namedNode("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+          rdf.namedNode(`http://purl.obolibrary.org/obo/envo.owl#Alignment`)
+        ),
+        // TODO: Hier nur für XML
+        rdf.quad(
+          rdf.blankNode(`genid1`),
+          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#xml"),
+          rdf.literal(`yes`)
+        ),
+        rdf.quad(
+          rdf.blankNode(`genid1`),
+          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#level"),
+          rdf.literal(`0`)
+        ),
+        rdf.quad(
+          rdf.blankNode(`genid1`),
+          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#type"),
+          rdf.literal(`??`)
+        ),
+
+        // TODO: currently static only
+        rdf.quad(
+          rdf.blankNode(`genid1`),
+          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#onto1"),
+          rdf.literal(`http://data.bioontology.org/ontologies/ENVO`)
+        ),
+
+        rdf.quad(
+          rdf.blankNode(`genid1`),
+          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#onto2"),
+          rdf.literal(`http://data.bioontology.org/ontologies/SWEET`)
+        ),
+        rdf.quad(
+          rdf.blankNode(`genid1`),
+          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#uri1"),
+          rdf.literal(`http://data.bioontology.org/ontologies/ENVO`)
+        ),
+        rdf.quad(
+          rdf.blankNode(`genid1`),
+          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#uri2"),
+          rdf.literal(`http://data.bioontology.org/ontologies/SWEET`)
+        ),
+      ];
 
       for (var idxSource in this.getMappingtable) {
+        var clean_idxSource = this.cleanSuffix(idxSource);
+
         for (var idxTarget of Object.keys(this.getMappingtable[idxSource])) {
-          setNewClassLabel("idxSource");
-          setNewClassLabel("idxTarget");
+          var clean_idxTarget = this.cleanSuffix(idxTarget);
 
-          // TODO check for prefix and correctness
+          //Map
           input.push(
             rdf.quad(
-              rdf.namedNode(`${idxSource}`),
-              rdf.namedNode(
-                this.getMappingtable[idxSource][idxTarget]["relation"]
-              ),
-              rdf.namedNode(`${idxTarget}`)
+              rdf.blankNode(`genid1`),
+              rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#map"),
+              rdf.blankNode(`genid${mappingIndex}`)
             )
           );
 
-          input.push(
+          //Cell
+          var cell = [
             rdf.quad(
-              rdf.namedNode(`${idxSource}`),
-              rdf.namedNode(`${idxTarget}`),
+              rdf.blankNode(`genid${mappingIndex}`),
+              rdf.namedNode("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+              rdf.literal(`http://purl.obolibrary.org/obo/envo.owl#Cell`)
+            ),
+            rdf.quad(
+              rdf.blankNode(`genid${mappingIndex}`),
+              rdf.namedNode("purl.obolibrary.org/obo/envo.owl#entity1"),
+              rdf.literal(`${clean_idxSource}`)
+            ),
+            rdf.quad(
+              rdf.blankNode(`genid${mappingIndex}`),
+              rdf.namedNode("purl.obolibrary.org/obo/envo.owl#entity2"),
+              rdf.literal(`${clean_idxTarget}`)
+            ),
+            rdf.quad(
+              rdf.blankNode(`genid${mappingIndex}`),
+              rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#measure"),
+              rdf.literal(`1`)
+            ),
+            rdf.quad(
+              rdf.blankNode(`genid${mappingIndex}`),
+              rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#relation"),
               rdf.literal(
-                "mes:" + '"1.0"^^<http://www.w3.org/2001/XMLSchema#float>'
+                `${this.getMappingtable[idxSource][idxTarget]["relation"]}`
               )
-            )
-          );
+            ),
+          ];
+
+          input = input.concat(cell);
+
+          mappingIndex += 1;
         }
       }
 
@@ -488,6 +561,7 @@ export default {
             foaf,
             rdfs,
             skos,
+            ns0: "http://purl.obolibrary.org/obo/envo.owl#",
           },
         });
 
@@ -500,6 +574,7 @@ export default {
             foaf,
             rdfs,
             skos,
+            ns0: "http://purl.obolibrary.org/obo/envo.owl#",
           },
         });
 
@@ -508,30 +583,17 @@ export default {
         console.log("jsonLD");
         console.log("sssom: work in progres");
 
-        // sink = await jsonld({
-        //   prefixes: {
-        //     schema,
-        //     dcterms,
-        //     foaf,
-        //     rdfs,
-        // skos
-        //   },
-        // });
+        sink = await jsonld({
+          prefixes: {
+            schema,
+            dcterms,
+            foaf,
+            rdfs,
+            skos,
+          },
+        });
 
-        runExportFlag = false;
-      } else if (fileExtension === "sssom") {
-        console.log("sssom: work in progres");
-        // sink = await jsonld({
-        //   prefixes: {
-        //     schema,
-        //     dcterms,
-        //     foaf,
-        //     rdfs,
-        // skos
-        //   },
-        // });
-
-        runExportFlag = false;
+        runExportFlag = true;
       }
 
       if (runExportFlag) {
