@@ -9,6 +9,7 @@ this.newMessage(message); */
     <div class="columns">
       <div class="column"></div>
       <div class="column is-8">
+        <br />
         <div
           style="margin-bottom: 1rem"
           v-for="message in messages"

@@ -225,7 +225,7 @@
 // Own components
 import TheMessenger from "@/components/TheMessenger";
 import TheMappingtable from "@/components/TheMappingtable";
-import TheTreeStructure from "@/components/TheTreeStructure";
+// import TheTreeStructure from "@/components/TheTreeStructure";
 import TheExport from "@/components/TheExport";
 
 // import vuex mutations
@@ -257,7 +257,7 @@ export default {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
     return {
-      intervalPerformance: false,
+      updateHeightIntervall: false,
       openCloseSecondStepView: "close", // this is the export component. Use 'open' or 'close'
 
       sourceFilename: "",
@@ -297,13 +297,15 @@ export default {
         "RDF/TTL",
         "RDF/JSON-LD (tbc)",
         "SSSOM (TTL)",
+        "SSSOM/JSON-LD",
       ],
-      dropdownExtension: ["", "csv", "rdf", "ttl", "json", "sssom"],
+      dropdownExtension: ["", "csv", "rdf", "ttl", "json", "sssom", "sssom"],
       dropdownExportFormatItem: 0,
     };
   },
 
   methods: {
+    // vuex store
     ...mapMutations({
       newMessage: "messenger/newMessage",
       setFile: "mappingtable/setFile",
@@ -745,10 +747,10 @@ export default {
 
     // TODO: remove after split
     updateHeight() {
-      var clearMyInterval = (param = this.intervalPerformance) =>
+      var clearMyInterval = (param = this.updateHeightIntervall) =>
         clearInterval(param);
 
-      this.intervalPerformance = setInterval(function () {
+      this.updateHeightIntervall = setInterval(function () {
         var treesToHandle = document.getElementsByClassName(
           "vue-treeselect__menu"
         );
@@ -790,62 +792,62 @@ export default {
   },
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-  async mounted() /* TODO: remove after split */ {
-    // console.log("mount");
-    // console.log("def tree");
-    // this.tree = {
-    //   value: { source: [], target: [] },
-    //   options: {
-    //     source: [
-    //       { label: "leaf alternate placement", id: 1 },
-    //       { label: "perianth color", id: 6 },
-    //       { label: "fruit pilosity", id: 5 },
-    //       { label: "whole plant lifestyle", id: 2 },
-    //       { label: "leaf morphology", id: 3 },
-    //       { label: "stamen morphology", id: 4 },
-    //     ],
-    //     target: [
-    //       { label: "life cycle habit", id: 8 },
-    //       { label: "fruit hairiness", id: 11 },
-    //       { label: "phyllotaxy", id: 7 },
-    //       { label: "microsporophyll morphlogy trait", id: 10 },
-    //       { label: "tepal color", id: 12 },
-    //       { label: "leaf morphology trait", id: 9 },
-    //     ],
-    //   },
-    //   reloadKey: { source: 0, target: 0 }, // reload index for VUE reloads
-    //   skos_flag: { source: false, target: false }, // we need to modify queries if it's a skos notation
-    // };
-    // function callback() {
-    //   console.log("TEST");
-    //   var allDivs = document.getElementsByTagName("*");
-    //   var source = [1, 2, 3, 4, 5, 6];
-    //   var target = [7, 8, 9, 10, 11, 12];
-    //   for (var left in source) {
-    //     var from = null,
-    //       to = null;
-    //     for (var singleDiv of allDivs) {
-    //       console.log("left", source[left]);
-    //       if (singleDiv.getAttribute("data-id") == source[left]) {
-    //         from = singleDiv;
-    //       } else if (singleDiv.getAttribute("data-id") == target[left]) {
-    //         to = singleDiv;
-    //       }
-    //       if (from != null && to != null) {
-    //         new LeaderLine(from, to);
-    //         from = null;
-    //         to = null;
-    //         break;
-    //       }
-    //     }
-    //   }
-    // }
-    // console.log("setTimeout");
-    // setTimeout(function () {
-    //   console.log("Callback Funktion wird aufgerufen");
-    //   callback(this.tree);
-    // }, 2000);
-  },
+  // async mounted() /* TODO: remove after split */ {
+  // console.log("mount");
+  // console.log("def tree");
+  // this.tree = {
+  //   value: { source: [], target: [] },
+  //   options: {
+  //     source: [
+  //       { label: "leaf alternate placement", id: 1 },
+  //       { label: "perianth color", id: 6 },
+  //       { label: "fruit pilosity", id: 5 },
+  //       { label: "whole plant lifestyle", id: 2 },
+  //       { label: "leaf morphology", id: 3 },
+  //       { label: "stamen morphology", id: 4 },
+  //     ],
+  //     target: [
+  //       { label: "life cycle habit", id: 8 },
+  //       { label: "fruit hairiness", id: 11 },
+  //       { label: "phyllotaxy", id: 7 },
+  //       { label: "microsporophyll morphlogy trait", id: 10 },
+  //       { label: "tepal color", id: 12 },
+  //       { label: "leaf morphology trait", id: 9 },
+  //     ],
+  //   },
+  //   reloadKey: { source: 0, target: 0 }, // reload index for VUE reloads
+  //   skos_flag: { source: false, target: false }, // we need to modify queries if it's a skos notation
+  // };
+  // function callback() {
+  //   console.log("TEST");
+  //   var allDivs = document.getElementsByTagName("*");
+  //   var source = [1, 2, 3, 4, 5, 6];
+  //   var target = [7, 8, 9, 10, 11, 12];
+  //   for (var left in source) {
+  //     var from = null,
+  //       to = null;
+  //     for (var singleDiv of allDivs) {
+  //       console.log("left", source[left]);
+  //       if (singleDiv.getAttribute("data-id") == source[left]) {
+  //         from = singleDiv;
+  //       } else if (singleDiv.getAttribute("data-id") == target[left]) {
+  //         to = singleDiv;
+  //       }
+  //       if (from != null && to != null) {
+  //         new LeaderLine(from, to);
+  //         from = null;
+  //         to = null;
+  //         break;
+  //       }
+  //     }
+  //   }
+  // }
+  // console.log("setTimeout");
+  // setTimeout(function () {
+  //   console.log("Callback Funktion wird aufgerufen");
+  //   callback(this.tree);
+  // }, 2000);
+  // },
 
   watch: {
     queueCount: {
