@@ -49,7 +49,7 @@ You can also enter the author, licence and other informations, if necessary. -->
 import { mapMutations, mapGetters } from "vuex";
 
 // RDF
-import rdf from "@rdfjs/data-model";
+import rdf_data_model from "@rdfjs/data-model";
 
 // Export RDF
 import { Readable } from "readable-stream";
@@ -68,6 +68,8 @@ import getStream from "get-stream";
 </script>
 
 <script>
+import CordraMixin from "@/mixins/cordra";
+
 export default {
   name: "TheExport",
   props: ["fileExtension"],
@@ -82,6 +84,7 @@ export default {
       license: "",
     };
   },
+  mixins: [CordraMixin],
 
   computed: {
     ...mapGetters({ getMappingtable: "mappingtable/getMappingtable" }),
@@ -106,13 +109,17 @@ export default {
           var clean_idxTarget = this.cleanSuffix(idxTarget);
 
           // Create mapping node
+
           input.push(
-            rdf.quad(
-              rdf.namedNode(clean_idxSource),
-              rdf.blankNode(
-                this.getMappingtable[idxSource][idxTarget]["relation"]
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(clean_idxSource),
+              rdf_data_model.namedNode(
+                this.getMappingtable[idxSource][idxTarget]["relation"].replace(
+                  "skos:",
+                  "http://www.w3.org/2004/02/skos/core#"
+                )
               ),
-              rdf.namedNode(clean_idxTarget)
+              rdf_data_model.namedNode(clean_idxTarget)
             )
           );
 
@@ -122,98 +129,104 @@ export default {
           singleMappingsIDs.push(singleMappingsID);
 
           singleMappings.push(
-            rdf.quad(
-              rdf.namedNode(singleMappingsID),
-              rdf.blankNode("rdf:type"),
-              rdf.blankNode("owl:Axiom")
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode(
+                "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+              ),
+              rdf_data_model.namedNode("http://www.w3.org/2002/07/owl#Axiom")
             )
           );
 
           singleMappings.push(
-            rdf.quad(
-              rdf.namedNode(singleMappingsID),
-              rdf.blankNode("sssom:comment"),
-              rdf.literal(this.getMappingtable[idxSource][idxTarget]["comment"])
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/comment"),
+              rdf_data_model.literal(
+                this.getMappingtable[idxSource][idxTarget]["comment"]
+              )
             )
           );
 
           singleMappings.push(
-            rdf.quad(
-              rdf.namedNode(singleMappingsID),
-              rdf.blankNode("sssom:confidence"),
-              rdf.literal("empty here") // TODO: link data here
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/confidence"),
+              rdf_data_model.literal("empty here") // TODO: link data here
             )
           );
 
           singleMappings.push(
-            rdf.quad(
-              rdf.namedNode(`${clean_idxSource}_${clean_idxTarget}`),
-              rdf.blankNode("sssom:last_updated"),
-              rdf.literal(new Date().toUTCString())
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(`${clean_idxSource}_${clean_idxTarget}`),
+              rdf_data_model.namedNode("https://w3id.org/sssom/last_updated"),
+              rdf_data_model.literal(new Date().toUTCString())
             )
           );
 
           singleMappings.push(
-            rdf.quad(
-              rdf.namedNode(singleMappingsID),
-              rdf.blankNode("sssom:mapping_cardinality"),
-              rdf.literal("empty here") // TODO: check and put here (1:1 or 1:n. Any other comopsition is not available)
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode(
+                "https://w3id.org/sssom/mapping_cardinality"
+              ),
+              rdf_data_model.literal("empty here") // TODO: check and put here (1:1 or 1:n. Any other comopsition is not available)
             )
           );
 
           singleMappings.push(
-            rdf.quad(
-              rdf.namedNode(singleMappingsID),
-              rdf.blankNode("sssom:mapping_date"),
-              rdf.literal("empty here") // TODO: Use the creation date here
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/mapping_date"),
+              rdf_data_model.literal("empty here") // TODO: Use the creation date here
             )
           );
 
           singleMappings.push(
-            rdf.quad(
-              rdf.namedNode(singleMappingsID),
-              rdf.blankNode("sssom:mappings"),
-              rdf.literal(`[${clean_idxSource}, ${clean_idxTarget}`)
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/mappings"),
+              rdf_data_model.literal(`[${clean_idxSource}, ${clean_idxTarget}`)
             )
           );
 
           singleMappings.push(
-            rdf.quad(
-              rdf.namedNode(singleMappingsID),
-              rdf.blankNode("sssom:object_id"),
-              rdf.literal(clean_idxTarget)
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/object_id"),
+              rdf_data_model.literal(clean_idxTarget)
             )
           );
           singleMappings.push(
-            rdf.quad(
-              rdf.namedNode(singleMappingsID),
-              rdf.blankNode("sssom:object_label"),
-              rdf.literal("Put label here") // TODO: Put label here
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/object_label"),
+              rdf_data_model.literal("Put label here") // TODO: Put label here
             )
           );
 
           singleMappings.push(
-            rdf.quad(
-              rdf.namedNode(singleMappingsID),
-              rdf.blankNode("sssom:predicate_id"),
-              rdf.literal(
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/predicate_id"),
+              rdf_data_model.literal(
                 this.getMappingtable[idxSource][idxTarget]["relation"]
               )
             )
           );
 
           singleMappings.push(
-            rdf.quad(
-              rdf.namedNode(singleMappingsID),
-              rdf.blankNode("sssom:subject_id"),
-              rdf.literal(clean_idxSource)
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/subject_id"),
+              rdf_data_model.literal(clean_idxSource)
             )
           );
           singleMappings.push(
-            rdf.quad(
-              rdf.namedNode(singleMappingsID),
-              rdf.blankNode("sssom:subject_label"),
-              rdf.literal("Put label here") // TODO: Put label here
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/subject_label"),
+              rdf_data_model.literal("Put label here") // TODO: Put label here
             )
           );
         }
@@ -221,144 +234,154 @@ export default {
 
       // Create mapping set here
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#type"),
-          rdf.namedNode("https://w3id.org/sssom/MappingSet")
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("http://www.w3.org/2000/01/rdf-schema#type"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/MappingSet")
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:author_label"),
-          rdf.literal(this.author)
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/author_label"),
+          rdf_data_model.literal(this.author)
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:mapping_tool"),
-          rdf.literal("mapping.bio")
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/mapping_tool"),
+          rdf_data_model.literal("mapping.bio")
         )
       );
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:mapping_tool_version"),
-          rdf.literal(this.versionMapper)
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:mapping_provider"),
-          rdf.literal("https://mapping.bio")
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode(
+            "https://w3id.org/sssom/mapping_tool_version"
+          ),
+          rdf_data_model.literal(this.versionMapper)
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:comment"),
-          rdf.literal(this.comment)
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/mapping_provider"),
+          rdf_data_model.literal("https://mapping.bio")
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:imports"),
-          rdf.literal("")
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/comment"),
+          rdf_data_model.literal(this.comment)
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:last_updated"),
-          rdf.literal(new Date().toUTCString())
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/imports"),
+          rdf_data_model.literal("")
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:license"),
-          rdf.literal(this.license)
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/last_updated"),
+          rdf_data_model.literal(new Date().toUTCString())
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:mapping_date"),
-          rdf.literal(new Date().toUTCString()) // TODO: Use the creation date here, if there is an available
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/license"),
+          rdf_data_model.literal(this.license)
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:mapping_registry_description"),
-          rdf.literal("")
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/mapping_date"),
+          rdf_data_model.literal(new Date().toUTCString()) // TODO: Use the creation date here, if there is an available
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:mapping_registry_id"),
-          rdf.literal("")
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode(
+            "https://w3id.org/sssom/mapping_registry_description"
+          ),
+          rdf_data_model.literal("")
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:mapping_registry_title"),
-          rdf.literal("")
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode(
+            "https://w3id.org/sssom/mapping_registry_id"
+          ),
+          rdf_data_model.literal("")
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:mapping_set_id"),
-          rdf.literal("") // TODO: a bigger part to do. Use the old one if available
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode(
+            "https://w3id.org/sssom/mapping_registry_title"
+          ),
+          rdf_data_model.literal("")
+        )
+      );
+
+      mappingSet.push(
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/mapping_set_id"),
+          rdf_data_model.literal("") // TODO: a bigger part to do. Use the old one if available
         )
       );
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:mapping_set_source"),
-          rdf.literal("") // TODO: open discussion
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/mapping_set_source"),
+          rdf_data_model.literal("") // TODO: open discussion
         )
       );
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:mapping_set_title"),
-          rdf.literal(this.mappingSetTitle)
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/mapping_set_title"),
+          rdf_data_model.literal(this.mappingSetTitle)
         )
       );
       mappingSet.push(
-        rdf.quad(
-          rdf.namedNode("MappingSet"),
-          rdf.blankNode("sssom:mapping_set_version"),
-          rdf.literal("") // TODO: Format?
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode(
+            "https://w3id.org/sssom/mapping_set_version"
+          ),
+          rdf_data_model.literal("") // TODO: Format?
         )
       );
 
       // include single mappings
       for (var item of singleMappingsIDs) {
         mappingSet.push(
-          rdf.quad(
-            rdf.namedNode("MappingSet"),
-            rdf.blankNode("sssom:mappings"),
-            rdf.blankNode(item)
+          rdf_data_model.quad(
+            rdf_data_model.namedNode("MappingSet"),
+            rdf_data_model.namedNode("https://w3id.org/sssom/mappings"),
+            rdf_data_model.blankNode(item)
           )
         );
       }
@@ -399,6 +422,7 @@ export default {
           schema,
           dcterms,
           foaf,
+          rdf,
           rdfs,
           skos,
           owl,
@@ -418,6 +442,9 @@ export default {
         output.on("data", (jsonld) => {
           console.log(jsonld);
           console.log("Content created", jsonld);
+
+          console.log("check_mixin", this.check_mixin());
+
           this.downloadMappingExport(jsonld, "sssom");
         });
         ///////////////////////////////
@@ -467,18 +494,18 @@ export default {
 
         if (!labelReady.includes(rowElement)) {
           // input.push(
-          //   rdf.quad(
-          //     rdf.namedNode("owl:class"),
-          //     rdf.namedNode("rdf:about"),
-          //     rdf.literal(`${cleanElement}`)
+          //   rdf_data_model.quad(
+          //     rdf_data_model.namedNode("owl:class"),
+          //     rdf_data_model.namedNode("rdf:about"),
+          //     rdf_data_model.literal(`${cleanElement}`)
           //   )
           // );
           //   // Create new label
           input.push(
-            rdf.quad(
-              rdf.namedNode(`${cleanElement}`),
-              rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
-              rdf.literal(this.getMappingtable[idxSource][idxTarget][title])
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(`${cleanElement}`),
+              rdf_data_model.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
+              rdf_data_model.literal(this.getMappingtable[idxSource][idxTarget][title])
             )
           );
           labelReady.push(rowElement);
@@ -487,49 +514,67 @@ export default {
 
       var mappingIndex = 2;
       var input = [
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-          rdf.namedNode(`http://purl.obolibrary.org/obo/envo.owl#Alignment`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+          ),
+          rdf_data_model.namedNode(
+            `http://purl.obolibrary.org/obo/envo.owl#Alignment`
+          )
         ),
         // TODO: Hier nur für XML
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#xml"),
-          rdf.literal(`yes`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://purl.obolibrary.org/obo/envo.owl#xml"
+          ),
+          rdf_data_model.literal(`yes`)
         ),
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#level"),
-          rdf.literal(`0`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://purl.obolibrary.org/obo/envo.owl#level"
+          ),
+          rdf_data_model.literal(`0`)
         ),
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#type"),
-          rdf.literal(`??`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://purl.obolibrary.org/obo/envo.owl#type"
+          ),
+          rdf_data_model.literal(`??`)
         ),
 
         // TODO: currently static only
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#onto1"),
-          rdf.literal(`http://data.bioontology.org/ontologies/ENVO`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://purl.obolibrary.org/obo/envo.owl#onto1"
+          ),
+          rdf_data_model.literal(`http://data.bioontology.org/ontologies/ENVO`)
         ),
 
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#onto2"),
-          rdf.literal(`http://data.bioontology.org/ontologies/SWEET`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://purl.obolibrary.org/obo/envo.owl#onto2"
+          ),
+          rdf_data_model.literal(`http://data.bioontology.org/ontologies/SWEET`)
         ),
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#uri1"),
-          rdf.literal(`http://data.bioontology.org/ontologies/ENVO`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://purl.obolibrary.org/obo/envo.owl#uri1"
+          ),
+          rdf_data_model.literal(`http://data.bioontology.org/ontologies/ENVO`)
         ),
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#uri2"),
-          rdf.literal(`http://data.bioontology.org/ontologies/SWEET`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://purl.obolibrary.org/obo/envo.owl#uri2"
+          ),
+          rdf_data_model.literal(`http://data.bioontology.org/ontologies/SWEET`)
         ),
       ];
 
@@ -541,39 +586,53 @@ export default {
 
           //Map
           input.push(
-            rdf.quad(
-              rdf.blankNode(`genid1`),
-              rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#map"),
-              rdf.blankNode(`genid${mappingIndex}`)
+            rdf_data_model.quad(
+              rdf_data_model.blankNode(`genid1`),
+              rdf_data_model.namedNode(
+                "http://purl.obolibrary.org/obo/envo.owl#map"
+              ),
+              rdf_data_model.blankNode(`genid${mappingIndex}`)
             )
           );
 
           //Cell
           var cell = [
-            rdf.quad(
-              rdf.blankNode(`genid${mappingIndex}`),
-              rdf.namedNode("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-              rdf.literal(`http://purl.obolibrary.org/obo/envo.owl#Cell`)
+            rdf_data_model.quad(
+              rdf_data_model.blankNode(`genid${mappingIndex}`),
+              rdf_data_model.namedNode(
+                "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+              ),
+              rdf_data_model.literal(
+                `http://purl.obolibrary.org/obo/envo.owl#Cell`
+              )
             ),
-            rdf.quad(
-              rdf.blankNode(`genid${mappingIndex}`),
-              rdf.namedNode("purl.obolibrary.org/obo/envo.owl#entity1"),
-              rdf.literal(`${clean_idxSource}`)
+            rdf_data_model.quad(
+              rdf_data_model.blankNode(`genid${mappingIndex}`),
+              rdf_data_model.namedNode(
+                "purl.obolibrary.org/obo/envo.owl#entity1"
+              ),
+              rdf_data_model.literal(`${clean_idxSource}`)
             ),
-            rdf.quad(
-              rdf.blankNode(`genid${mappingIndex}`),
-              rdf.namedNode("purl.obolibrary.org/obo/envo.owl#entity2"),
-              rdf.literal(`${clean_idxTarget}`)
+            rdf_data_model.quad(
+              rdf_data_model.blankNode(`genid${mappingIndex}`),
+              rdf_data_model.namedNode(
+                "purl.obolibrary.org/obo/envo.owl#entity2"
+              ),
+              rdf_data_model.literal(`${clean_idxTarget}`)
             ),
-            rdf.quad(
-              rdf.blankNode(`genid${mappingIndex}`),
-              rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#measure"),
-              rdf.literal(`1`)
+            rdf_data_model.quad(
+              rdf_data_model.blankNode(`genid${mappingIndex}`),
+              rdf_data_model.namedNode(
+                "http://purl.obolibrary.org/obo/envo.owl#measure"
+              ),
+              rdf_data_model.literal(`1`)
             ),
-            rdf.quad(
-              rdf.blankNode(`genid${mappingIndex}`),
-              rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#relation"),
-              rdf.literal(
+            rdf_data_model.quad(
+              rdf_data_model.blankNode(`genid${mappingIndex}`),
+              rdf_data_model.namedNode(
+                "http://purl.obolibrary.org/obo/envo.owl#relation"
+              ),
+              rdf_data_model.literal(
                 `${this.getMappingtable[idxSource][idxTarget]["relation"]}`
               )
             ),
