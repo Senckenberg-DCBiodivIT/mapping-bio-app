@@ -32,6 +32,17 @@ export default {
       hideLoader: "loader/hideLoader",
     }),
 
+    check_mixin() {
+      /* Description: */
+
+      console.group("check_mixin");
+
+      console.log("Cordra mixin works well");
+
+      console.groupEnd();
+      return true;
+    },
+
     cordraCreateTemporaryClient() {
       if (this.$keycloak_token()) {
         return new CordraClient(process.env.VUE_APP_CORDRA_URL, {
