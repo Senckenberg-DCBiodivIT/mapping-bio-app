@@ -134,7 +134,7 @@ export default {
               rdf_data_model.namedNode(
                 "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
               ),
-              rdf_data_model.namedNode("http://www.w3.org/2002/07/owl#Axiom")
+              rdf_data_model.namedNode("https://w3id.org/sssom/Mapping")
             )
           );
 
@@ -236,7 +236,9 @@ export default {
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("http://www.w3.org/2000/01/rdf-schema#type"),
+          rdf_data_model.namedNode(
+            "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+          ),
           rdf_data_model.namedNode("https://w3id.org/sssom/MappingSet")
         )
       );
@@ -377,11 +379,12 @@ export default {
 
       // include single mappings
       for (var item of singleMappingsIDs) {
+        console.log("item", item);
         mappingSet.push(
           rdf_data_model.quad(
             rdf_data_model.namedNode("MappingSet"),
             rdf_data_model.namedNode("https://w3id.org/sssom/mappings"),
-            rdf_data_model.blankNode(item)
+            rdf_data_model.namedNode(item)
           )
         );
       }
@@ -390,22 +393,6 @@ export default {
       const sssom = "https://w3id.org/sssom/";
 
       var runExportFlag = true;
-
-      // var sink = await turtle({
-      // var sink = await rdfXml({
-      // var sink = await jsonld({
-      //   prefixes: {
-      //     schema,
-      //     dcterms,
-      //     foaf,
-      //     rdfs,
-      //     skos,
-      //     owl,
-      //     sssom,
-      //   },
-      // });
-      // console.log("sink", sink);
-      // console.log("prefixes", prefixes);
 
       if (runExportFlag) {
         var exportArray = input.concat(mappingSet).concat(singleMappings);
@@ -433,19 +420,57 @@ export default {
           baseIRI: "http://example.org/",
           context,
           compact: true,
+
           encoding: "string",
           prettyPrint: true,
         });
 
+        const serializerJsonldNew = new SerializerJsonld({
+          baseIRI: "http://example.org/",
+          context,
+          // compact: true,
+          frame: {
+            "@context":
+              "https://mapping.bio/api/objects/20.500.14269/e421a2e92fa8c487eb85",
+            "@type": "MappingSet",
+          },
+          // encoding: "string",
+          prettyPrint: true,
+        });
+
+        console.log("-- test jsonld --");
+        console.log("serializer", serializerJsonldNew);
+        console.log("readable", readable);
+
         const output = serializerJsonld.import(readable);
+        const outputNew = serializerJsonldNew.import(readable);
 
         output.on("data", (jsonld) => {
-          console.log(jsonld);
+          // console.log(jsonld);
           console.log("Content created", jsonld);
 
-          console.log("check_mixin", this.check_mixin());
+          // var cordraTe'st = this.cordraCreateDocument({
+          //   type: "MappingSet",
+          //   content: jsonld,
+          // });'
 
-          this.downloadMappingExport(jsonld, "sssom");
+          // console.log("cordraTest", cordraTest);
+
+          // this.downloadMappingExport(jsonld, "sssom");
+        });
+
+        outputNew.on("data", (jsonld) => {
+          // console.log(jsonld);
+          console.log("Content created NEW", jsonld);
+
+          var cordraTest = this.cordraCreateDocument({
+            type: "MappingSetGraph",
+            content: jsonld,
+          });
+
+          console.log("cordraTest", cordraTest);
+
+          // this.downloadMappingExport(jsonld, "sssom");
         });
         ///////////////////////////////
 
