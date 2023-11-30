@@ -1,4 +1,4 @@
-<!-- Here you go the "export" component with you create 
+<!-- Here you go the "export" component with you create
 the exported data and the file output.
 You can also enter the author, licence and other informations, if necessary. -->
 
@@ -389,9 +389,6 @@ export default {
         );
       }
 
-      const { schema, dcterms, foaf, rdfs, rdf, skos, owl } = prefixes;
-      const sssom = "https://w3id.org/sssom/";
-
       var runExportFlag = true;
 
       if (runExportFlag) {
@@ -405,33 +402,16 @@ export default {
         // console.log("stream", stream);
 
         ///////////////////
-        const context = {
-          schema,
-          dcterms,
-          foaf,
-          rdf,
-          rdfs,
-          skos,
-          owl,
-          sssom,
-        };
 
+        const sssom_context =
+          "https://raw.githubusercontent.com/mapping-commons/sssom/0.15.0/src/sssom_schema/context/sssom_schema.context.jsonld";
+        const context = { "@context": sssom_context };
         const serializerJsonld = new SerializerJsonld({
-          baseIRI: "http://example.org/",
-          context,
-          compact: true,
-
-          encoding: "string",
-          prettyPrint: true,
-        });
-
-        const serializerJsonldNew = new SerializerJsonld({
           baseIRI: "http://example.org/",
           context,
           // compact: true,
           frame: {
-            "@context":
-              "https://mapping.bio/api/objects/20.500.14269/e421a2e92fa8c487eb85",
+            "@context": sssom_context,
             "@type": "MappingSet",
           },
           // encoding: "string",
@@ -439,32 +419,17 @@ export default {
         });
 
         console.log("-- test jsonld --");
-        console.log("serializer", serializerJsonldNew);
+        console.log("serializer", serializerJsonld);
         console.log("readable", readable);
 
-        const output = serializerJsonld.import(readable);
-        const outputNew = serializerJsonldNew.import(readable);
-
-        output.on("data", (jsonld) => {
-          // console.log(jsonld);
-          console.log("Content created", jsonld);
-
-          // var cordraTe'st = this.cordraCreateDocument({
-          //   type: "MappingSet",
-          //   content: jsonld,
-          // });'
-
-          // console.log("cordraTest", cordraTest);
-
-          // this.downloadMappingExport(jsonld, "sssom");
-        });
+        const outputNew = serializerJsonld.import(readable);
 
         outputNew.on("data", (jsonld) => {
           // console.log(jsonld);
-          console.log("Content created NEW", jsonld);
+          console.log("Content created", jsonld);
 
           var cordraTest = this.cordraCreateDocument({
-            type: "MappingSetGraph",
+            type: "MappingSet",
             content: jsonld,
           });
 
@@ -511,7 +476,7 @@ export default {
 
       // In the following loop this function is used to create new labels AND classes without duplicating them
       /*const setNewClassLabel = (varName) => {
-        // varName is "idxSource" or "idxTarget" only 
+        // varName is "idxSource" or "idxTarget" only
 
         const rowElement = eval(varName);
         const cleanElement = this.cleanSuffix(rowElement);
