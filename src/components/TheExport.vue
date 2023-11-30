@@ -81,7 +81,7 @@ export default {
       author: "",
       mappingSetTitle: "",
       comment: "",
-      license: "",
+      license: "https://creativecommons.org/licenses/by/4.0/",
     };
   },
   mixins: [CordraMixin],
@@ -95,6 +95,9 @@ export default {
 
     async exportSSSOM() {
       console.group("exportSSSOM");
+      const XSDDateURI = rdf_data_model.namedNode(
+        "http://www.w3.org/2001/XMLSchema#date"
+      );
 
       var input = [];
       var mappingSet = [];
@@ -141,7 +144,9 @@ export default {
           singleMappings.push(
             rdf_data_model.quad(
               rdf_data_model.namedNode(singleMappingsID),
-              rdf_data_model.namedNode("https://w3id.org/sssom/comment"),
+              rdf_data_model.namedNode(
+                "http://www.w3.org/2000/01/rdf-schema#comment"
+              ),
               rdf_data_model.literal(
                 this.getMappingtable[idxSource][idxTarget]["comment"]
               )
@@ -177,9 +182,14 @@ export default {
           singleMappings.push(
             rdf_data_model.quad(
               rdf_data_model.namedNode(singleMappingsID),
-              rdf_data_model.namedNode("https://w3id.org/sssom/mapping_date"),
-              rdf_data_model.literal("empty here") // TODO: Use the creation date here
+              rdf_data_model.namedNode("http://purl.org/pav/authoredOn"),
+              rdf_data_model.literal(
+                new Date().toISOString().split("T")[0],
+                undefined,
+                XSDDateURI
+              )
             )
+            // TODO: Use the creation date here, if there is an available
           );
 
           singleMappings.push(
@@ -272,14 +282,16 @@ export default {
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
           rdf_data_model.namedNode("https://w3id.org/sssom/mapping_provider"),
-          rdf_data_model.literal("https://mapping.bio")
+          rdf_data_model.namedNode("https://mapping.bio")
         )
       );
 
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("https://w3id.org/sssom/comment"),
+          rdf_data_model.namedNode(
+            "http://www.w3.org/2000/01/rdf-schema#comment"
+          ),
           rdf_data_model.literal(this.comment)
         )
       );
@@ -300,19 +312,31 @@ export default {
         )
       );
 
+      if (
+        !(typeof this.license === "string" && this.license.startsWith("http"))
+      ) {
+        // NOTE: The SSSOM schema always requires a license and it must be a URI (= named node)
+        this.licence = "http://nolicense";
+      }
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("https://w3id.org/sssom/license"),
-          rdf_data_model.literal(this.license)
+          rdf_data_model.namedNode("http://purl.org/dc/terms/license"),
+          rdf_data_model.namedNode(this.license)
         )
       );
 
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("https://w3id.org/sssom/mapping_date"),
-          rdf_data_model.literal(new Date().toUTCString()) // TODO: Use the creation date here, if there is an available
+          rdf_data_model.namedNode("http://purl.org/pav/authoredOn"),
+          rdf_data_model.literal(
+            new Date().toISOString().split("T")[0],
+            undefined,
+            XSDDateURI
+          )
+          // TODO: Use the creation date here, if there is an available
+          // Note: The SSSOM JSON Schema requires a date string in format yyyy-MM-dd
         )
       );
 
@@ -350,29 +374,31 @@ export default {
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
           rdf_data_model.namedNode("https://w3id.org/sssom/mapping_set_id"),
-          rdf_data_model.literal("") // TODO: a bigger part to do. Use the old one if available
+          rdf_data_model.namedNode("http://mapping.example") // TODO: a bigger part to do. Use the old one if available
+          // NOTE: SSSOM requires a namedNode here, not a literal .
+          // NOTE: On the server-side (Cordra) the mapping_set_id value gets anyway
+          // overwritten with the generated Cordra ID.
         )
       );
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("https://w3id.org/sssom/mapping_set_source"),
-          rdf_data_model.literal("") // TODO: open discussion
+          rdf_data_model.namedNode("http://www.w3.org/ns/prov#wasDerivedFrom"),
+          rdf_data_model.namedNode("http://exampleDerived") // TODO: open discussion
+          // NOTE: SSSOM requires a namedNode here, not a literal .
         )
       );
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("https://w3id.org/sssom/mapping_set_title"),
+          rdf_data_model.namedNode("http://purl.org/dc/terms/title"),
           rdf_data_model.literal(this.mappingSetTitle)
         )
       );
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode(
-            "https://w3id.org/sssom/mapping_set_version"
-          ),
+          rdf_data_model.namedNode("http://www.w3.org/2002/07/owl#versionInfo"),
           rdf_data_model.literal("") // TODO: Format?
         )
       );
@@ -424,9 +450,56 @@ export default {
 
         const outputNew = serializerJsonld.import(readable);
 
-        outputNew.on("data", (jsonld) => {
-          // console.log(jsonld);
+        outputNew.on("data", (jsonldGraph) => {
+          // as soon as there are several IRIs in the output, the serializer
+          // produces a JSON-LD @graph structure. However, the first element
+          // shoult be the MappingSet according to JSON-LD frame, so we are
+          // only interested in this
+          const jsonld = jsonldGraph["@graph"][0];
           console.log("Content created", jsonld);
+
+          // There are several wrong properties which in the SSSOM Schema are not
+          // allowed on type MappingSet, see: https://mapping-commons.github.io/sssom/MappingSet/
+          // Provisionally delete them here, but they should be completely removed from the code
+          delete jsonld["mapping_registry_description"];
+          delete jsonld["mapping_registry_title"];
+          delete jsonld["sssom:imports"];
+          delete jsonld["sssom:last_updated"];
+          delete jsonld["sssom:mapping_registry_id"];
+
+          // "author_label" is also wrong on MappingSet but should be defined on
+          // the individual mapping see https://mapping-commons.github.io/sssom/author_label/
+          delete jsonld["author_label"];
+
+          // The following bug is strange:
+          // The specific datatype declaration as XSDDateURI for "pav:authoredOn"
+          // does not seem to be acknowledged by the json-ld serializer, and
+          // therefore the json-ld context does not make the correct alias
+          // replacement with "mapping_date".
+          // Provisional fix:
+          if ("pav:authoredOn" in jsonld) {
+            jsonld["mapping_date"] = jsonld["pav:authoredOn"];
+            delete jsonld["pav:authoredOn"];
+          }
+          if ("mappings" in jsonld) {
+            const mappings = jsonld["mappings"];
+            if (Array.isArray(mappings)) {
+              mappings.forEach((mapping) => {
+                if ("pav:authoredOn" in mapping) {
+                  mapping["mapping_date"] = mapping["pav:authoredOn"];
+                  delete mapping["pav:authoredOn"];
+                }
+              });
+            }
+          }
+
+          // The following seems to have no other option, more a bug in the SSOM / LinkML schema:
+          if ("mapping_set_source" in jsonld) {
+            const mapping_set_source = jsonld["mapping_set_source"];
+            if (!Array.isArray(mapping_set_source)) {
+              jsonld["mapping_set_source"] = [mapping_set_source];
+            }
+          }
 
           var cordraTest = this.cordraCreateDocument({
             type: "MappingSet",
