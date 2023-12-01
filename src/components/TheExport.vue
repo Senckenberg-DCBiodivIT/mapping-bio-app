@@ -91,7 +91,7 @@ export default {
   },
 
   methods: {
-    ...mapMutations({}), // Later maybe we need a error message
+    ...mapMutations({}), // Later maybe we need an error message
 
     async exportSSSOM() {
       console.group("exportSSSOM");
@@ -104,12 +104,38 @@ export default {
       var singleMappings = [];
       var singleMappingsIDs = [];
 
+      const sssom_json_ld = {
+        "@id": "",
+        "@type": "",
+        comment: "",
+        license: "",
+
+        mapping_date: "",
+        mapping_provider: "",
+        mapping_set_id: "",
+
+        mapping_set_source: [], // TODO: check that
+
+        mapping_set_title: "",
+        mapping_set_version: "",
+        mapping_tool: "",
+        mapping_tool_version: "",
+
+        mappings: [],
+      };
+
       // Clean data
       for (var idxSource in this.getMappingtable) {
         var clean_idxSource = this.cleanSuffix(idxSource);
 
         for (var idxTarget of Object.keys(this.getMappingtable[idxSource])) {
           var clean_idxTarget = this.cleanSuffix(idxTarget);
+          const single_node = {
+            "@id": "",
+            "@type": "",
+            comment: "",
+            mapping_cardinality: "",
+          };
 
           // Create mapping node
 
@@ -129,8 +155,13 @@ export default {
           // Discribe mapping
 
           let singleMappingsID = `${clean_idxSource}_${clean_idxTarget}`;
+
+          single_node["@id"] = singleMappingsID;
+          // TODO: remove later
           singleMappingsIDs.push(singleMappingsID);
 
+          single_node["@type"] = "sssom:Mapping";
+          // TODO: remove later
           singleMappings.push(
             rdf_data_model.quad(
               rdf_data_model.namedNode(singleMappingsID),
@@ -141,6 +172,9 @@ export default {
             )
           );
 
+          single_node["@comment"] =
+            this.getMappingtable[idxSource][idxTarget]["comment"];
+          // TODO: remove later
           singleMappings.push(
             rdf_data_model.quad(
               rdf_data_model.namedNode(singleMappingsID),
@@ -161,6 +195,8 @@ export default {
             )
           );
 
+          single_node["last_updated"] = new Date().toUTCString();
+          // TODO: remove later
           singleMappings.push(
             rdf_data_model.quad(
               rdf_data_model.namedNode(`${clean_idxSource}_${clean_idxTarget}`),
@@ -169,13 +205,15 @@ export default {
             )
           );
 
+          single_node["mapping_cardinality"] = "empty here"; // TODO: check and put here (1:1 or 1:n. Any other comopsition is not available)
+          // TODO: remove later
           singleMappings.push(
             rdf_data_model.quad(
               rdf_data_model.namedNode(singleMappingsID),
               rdf_data_model.namedNode(
                 "https://w3id.org/sssom/mapping_cardinality"
               ),
-              rdf_data_model.literal("empty here") // TODO: check and put here (1:1 or 1:n. Any other comopsition is not available)
+              rdf_data_model.literal("empty here")
             )
           );
 
@@ -239,10 +277,17 @@ export default {
               rdf_data_model.literal("Put label here") // TODO: Put label here
             )
           );
+
+          sssom_json_ld["mappings"].push(single_node);
         }
       }
 
       // Create mapping set here
+      sssom_json_ld["@id"] = "MappingSet";
+      sssom_json_ld["@type"] = "MappingSet"; // TODO: Check if the table is not empty
+      sssom_json_ld["comment"] = this.comment;
+
+      // TODO: remove later
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
@@ -261,6 +306,8 @@ export default {
         )
       );
 
+      sssom_json_ld["mapping_tool"] = "mapping.bio";
+      // TODO: remove later
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
@@ -268,6 +315,9 @@ export default {
           rdf_data_model.literal("mapping.bio")
         )
       );
+
+      sssom_json_ld["mapping_tool_version"] = this.versionMapper;
+      // TODO: remove later
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
@@ -278,6 +328,8 @@ export default {
         )
       );
 
+      sssom_json_ld["mapping_provider"] = "https://mapping.bio";
+      // TODO: remove later
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
@@ -286,6 +338,7 @@ export default {
         )
       );
 
+      // TODO: remove later
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
@@ -312,12 +365,17 @@ export default {
         )
       );
 
+      // TODO: Use dropdown on the form before
       if (
         !(typeof this.license === "string" && this.license.startsWith("http"))
       ) {
         // NOTE: The SSSOM schema always requires a license and it must be a URI (= named node)
-        this.licence = "http://nolicense";
+        this.license = "http://nolicense";
       }
+
+      sssom_json_ld["license"] = this.license;
+
+      // TODO: remove later
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
@@ -370,6 +428,7 @@ export default {
         )
       );
 
+      sssom_json_ld["mapping_set_id"] = "http://mapping.example";
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
@@ -378,6 +437,8 @@ export default {
           // NOTE: SSSOM requires a namedNode here, not a literal .
           // NOTE: On the server-side (Cordra) the mapping_set_id value gets anyway
           // overwritten with the generated Cordra ID.
+
+          // TODO: Take care about edited mappings
         )
       );
       mappingSet.push(
@@ -423,15 +484,10 @@ export default {
 
         let readable = Readable.from(exportArray);
 
-        // console.log("Try to create a stream with sink");
-        // const stream = await sink.import(readable);
-        // console.log("stream", stream);
-
-        ///////////////////
-
         const sssom_context =
           "https://raw.githubusercontent.com/mapping-commons/sssom/0.15.0/src/sssom_schema/context/sssom_schema.context.jsonld";
         const context = { "@context": sssom_context };
+
         const serializerJsonld = new SerializerJsonld({
           baseIRI: "http://example.org/",
           context,
@@ -448,15 +504,17 @@ export default {
         console.log("serializer", serializerJsonld);
         console.log("readable", readable);
 
-        const outputNew = serializerJsonld.import(readable);
+        const output = serializerJsonld.import(readable);
 
-        outputNew.on("data", (jsonldGraph) => {
+        output.on("data", (jsonldGraph) => {
+          console.log("jsonldGraph created", jsonldGraph);
+          console.log("");
+
           // as soon as there are several IRIs in the output, the serializer
           // produces a JSON-LD @graph structure. However, the first element
           // shoult be the MappingSet according to JSON-LD frame, so we are
           // only interested in this
           const jsonld = jsonldGraph["@graph"][0];
-          console.log("Content created", jsonld);
 
           // There are several wrong properties which in the SSSOM Schema are not
           // allowed on type MappingSet, see: https://mapping-commons.github.io/sssom/MappingSet/
@@ -480,6 +538,8 @@ export default {
           if ("pav:authoredOn" in jsonld) {
             jsonld["mapping_date"] = jsonld["pav:authoredOn"];
             delete jsonld["pav:authoredOn"];
+
+            sssom_json_ld["mapping_date"] = jsonld["pav:authoredOn"];
           }
           if ("mappings" in jsonld) {
             const mappings = jsonld["mappings"];
@@ -487,7 +547,11 @@ export default {
               mappings.forEach((mapping) => {
                 if ("pav:authoredOn" in mapping) {
                   mapping["mapping_date"] = mapping["pav:authoredOn"];
+                  sssom_json_ld["mapping_date"] = mapping["pav:authoredOn"];
+
                   delete mapping["pav:authoredOn"];
+
+                  // TODO: implement for sssom_json_ld
                 }
               });
             }
@@ -501,12 +565,21 @@ export default {
             }
           }
 
-          var cordraTest = this.cordraCreateDocument({
+          console.log("Content created", jsonld);
+          console.log("sssom_json_ld", sssom_json_ld);
+
+          var cordra_prev_obj = this.cordraCreateDocument({
             type: "MappingSet",
             content: jsonld,
           });
 
-          console.log("cordraTest", cordraTest);
+          var cordra_submit_obj = this.cordraCreateDocument({
+            type: "MappingSet",
+            content: sssom_json_ld,
+          });
+
+          console.log("cordra cordra_submit_obj ", cordra_submit_obj);
+          console.log("cordra cordra_prev_obj ", cordra_prev_obj);
 
           // this.downloadMappingExport(jsonld, "sssom");
         });
