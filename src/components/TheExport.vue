@@ -26,9 +26,32 @@ You can also enter the author, licence and other informations, if necessary. -->
     </div>
 
     <div class="field">
-      <label class="label">License</label>
       <div class="control">
-        <input class="input" type="text" v-model="license" />
+        <o-field label="License:" variant="">
+          <o-dropdown aria-role="list" v-model="license_dropdown.selected_item">
+            <template #trigger="{ active }">
+              <o-button variant="primary">
+                <span>{{
+                  license_dropdown.items[license_dropdown.selected_item]
+                }}</span>
+
+                <o-icon
+                  pack="fa"
+                  :icon="active ? 'chevron-down' : 'chevron-up'"
+                ></o-icon>
+              </o-button>
+            </template>
+
+            <o-dropdown-item
+              v-for="(item, key) in license_dropdown.items"
+              :key="key"
+              :value="key"
+              aria-role="listitem"
+            >
+              {{ license_dropdown.items[key] }}</o-dropdown-item
+            >
+          </o-dropdown>
+        </o-field>
       </div>
     </div>
 
@@ -47,12 +70,14 @@ You can also enter the author, licence and other informations, if necessary. -->
 
 <script setup>
 import { mapMutations, mapGetters } from "vuex";
+import CordraMixin from "@/mixins/cordra";
 
 // RDF
 import rdf_data_model from "@rdfjs/data-model";
 
 // Export RDF
 import { Readable } from "readable-stream";
+import formats from "@rdfjs/formats-common";
 
 import prefixes from "@zazuko/rdf-vocabularies/prefixes";
 
@@ -68,8 +93,6 @@ import getStream from "get-stream";
 </script>
 
 <script>
-import CordraMixin from "@/mixins/cordra";
-
 export default {
   name: "TheExport",
   props: ["fileExtension"],
@@ -81,7 +104,26 @@ export default {
       author: "",
       mappingSetTitle: "",
       comment: "",
-      license: "https://creativecommons.org/licenses/by/4.0/",
+
+      license_dropdown: {
+        selected_item: 0,
+        items: [
+          "CC BY 4.0",
+          "CC BY-NC 4.0",
+          "CC BY-NC-ND 4.0",
+          "CC BY-NC-SA 4.0",
+          "CC BY-ND 4.0",
+          "CC BY-SA 4.0",
+        ],
+        links: [
+          "https://creativecommons.org/licenses/by/4.0/",
+          "https://creativecommons.org/licenses/by-nc/4.0/",
+          "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+          "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "https://creativecommons.org/licenses/by-nd/4.0/",
+          "https://creativecommons.org/licenses/by-sa/4.0/",
+        ],
+      },
     };
   },
   mixins: [CordraMixin],
@@ -93,8 +135,44 @@ export default {
   methods: {
     ...mapMutations({}), // Later maybe we need an error message
 
-    async exportSSSOM() {
-      console.group("exportSSSOM");
+    async create_sssom_ttl() {
+      /* Description: */
+
+      console.group("create_sssom_ttl");
+      var sssom_json_ld = await this.create_sssom_json_ld();
+
+      // Convert to ttl
+      var quads = []; // Storage for parsed sssom
+      var ttl_export_stream;
+      var ttl_export = "";
+
+      const quad_parse_json = formats.parsers.import(
+        "application/ld+json",
+        Readable.from(JSON.stringify(sssom_json_ld))
+      );
+
+      quad_parse_json.on("data", (quad) => quads.push(quad));
+      quad_parse_json.on("prefix", (prefix, ns) => quads.push(prefix, ns)); // TODO: Copy from Cordra
+
+      quad_parse_json.on("end", () => {
+        ttl_export_stream = formats.serializers.import(
+          "text/turtle",
+          Readable.from(quads)
+        );
+
+        ttl_export_stream.on("data", (data) => (ttl_export += data));
+        ttl_export_stream.on(
+          "end",
+          // () => null
+          console.log("ttl_export", ttl_export)
+        );
+      });
+
+      console.groupEnd();
+    },
+
+    async create_sssom_json_ld() {
+      console.group("create_jsonLD_export");
       const XSDDateURI = rdf_data_model.namedNode(
         "http://www.w3.org/2001/XMLSchema#date"
       );
@@ -114,7 +192,7 @@ export default {
         mapping_provider: "",
         mapping_set_id: "",
 
-        mapping_set_source: [], // TODO: check that
+        mapping_set_source: [],
 
         mapping_set_title: "",
         mapping_set_version: "",
@@ -131,10 +209,10 @@ export default {
         for (var idxTarget of Object.keys(this.getMappingtable[idxSource])) {
           var clean_idxTarget = this.cleanSuffix(idxTarget);
           const single_node = {
-            "@id": "",
-            "@type": "",
-            comment: "",
-            mapping_cardinality: "",
+            "@mapping_set_id": "",
+            // "@type": "",
+            // comment: "",
+            // mapping_cardinality: "",
           };
 
           // Create mapping node
@@ -284,68 +362,27 @@ export default {
 
       // Create mapping set here
       sssom_json_ld["@id"] = "MappingSet";
-      sssom_json_ld["@type"] = "MappingSet"; // TODO: Check if the table is not empty
+      sssom_json_ld["@type"] = "MappingSet";
       sssom_json_ld["comment"] = this.comment;
+      sssom_json_ld["license"] =
+        this.license_dropdown.items[this.license_dropdown.selected_item];
 
-      // TODO: remove later
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode(
-            "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
-          ),
-          rdf_data_model.namedNode("https://w3id.org/sssom/MappingSet")
-        )
-      );
+      sssom_json_ld["mapping_date"] = ""; // TODO
+      sssom_json_ld["mapping_provider"] = "https://mapping.bio";
+      sssom_json_ld["mapping_set_id"] = ""; // Handling by Cordra
+
+      sssom_json_ld["mapping_set_source"] = []; // TODO
+
+      sssom_json_ld["mapping_set_title"] = ""; // TODO:
+      sssom_json_ld["mapping_set_version"] = ""; // TODO
+      sssom_json_ld["mapping_tool"] = "mapping.bio";
+      sssom_json_ld["mapping_tool_version"] = this.versionMapper;
 
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
           rdf_data_model.namedNode("https://w3id.org/sssom/author_label"),
           rdf_data_model.literal(this.author)
-        )
-      );
-
-      sssom_json_ld["mapping_tool"] = "mapping.bio";
-      // TODO: remove later
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("https://w3id.org/sssom/mapping_tool"),
-          rdf_data_model.literal("mapping.bio")
-        )
-      );
-
-      sssom_json_ld["mapping_tool_version"] = this.versionMapper;
-      // TODO: remove later
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode(
-            "https://w3id.org/sssom/mapping_tool_version"
-          ),
-          rdf_data_model.literal(this.versionMapper)
-        )
-      );
-
-      sssom_json_ld["mapping_provider"] = "https://mapping.bio";
-      // TODO: remove later
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("https://w3id.org/sssom/mapping_provider"),
-          rdf_data_model.namedNode("https://mapping.bio")
-        )
-      );
-
-      // TODO: remove later
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode(
-            "http://www.w3.org/2000/01/rdf-schema#comment"
-          ),
-          rdf_data_model.literal(this.comment)
         )
       );
 
@@ -362,25 +399,6 @@ export default {
           rdf_data_model.namedNode("MappingSet"),
           rdf_data_model.namedNode("https://w3id.org/sssom/last_updated"),
           rdf_data_model.literal(new Date().toUTCString())
-        )
-      );
-
-      // TODO: Use dropdown on the form before
-      if (
-        !(typeof this.license === "string" && this.license.startsWith("http"))
-      ) {
-        // NOTE: The SSSOM schema always requires a license and it must be a URI (= named node)
-        this.license = "http://nolicense";
-      }
-
-      sssom_json_ld["license"] = this.license;
-
-      // TODO: remove later
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("http://purl.org/dc/terms/license"),
-          rdf_data_model.namedNode(this.license)
         )
       );
 
@@ -428,7 +446,6 @@ export default {
         )
       );
 
-      sssom_json_ld["mapping_set_id"] = "http://mapping.example";
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
@@ -507,7 +524,7 @@ export default {
         const output = serializerJsonld.import(readable);
 
         output.on("data", (jsonldGraph) => {
-          console.log("jsonldGraph created", jsonldGraph);
+          console.log("jsonldGraph created");
           console.log("");
 
           // as soon as there are several IRIs in the output, the serializer
@@ -565,29 +582,9 @@ export default {
             }
           }
 
-          console.log("Content created", jsonld);
           console.log("sssom_json_ld", sssom_json_ld);
-
-          var cordra_prev_obj = this.cordraCreateDocument({
-            type: "MappingSet",
-            content: jsonld,
-          });
-
-          var cordra_submit_obj = this.cordraCreateDocument({
-            type: "MappingSet",
-            content: sssom_json_ld,
-          });
-
-          console.log("cordra cordra_submit_obj ", cordra_submit_obj);
-          console.log("cordra cordra_prev_obj ", cordra_prev_obj);
-
-          // this.downloadMappingExport(jsonld, "sssom");
+          return sssom_json_ld;
         });
-        ///////////////////////////////
-
-        // let content = await getStream(stream);
-        // console.log("Content created", content);
-        // this.downloadMappingExport(content, "sssom"); // TODO: set json later
       }
 
       console.groupEnd();
@@ -858,11 +855,20 @@ export default {
       this.$emit("openClose", "close");
     },
 
-    exportMapping() {
+    async exportMapping() {
       if (this.fileExtension === "csv") {
         this.exportCSV();
       } else if (this.fileExtension == "sssom") {
-        this.exportSSSOM();
+        let sssom_json_ld = await this.create_sssom_json_ld();
+
+        var cordra_submit_obj = this.cordraCreateDocument({
+          type: "MappingSet",
+          content: sssom_json_ld,
+        });
+
+        // console.log("cordra cordra_submit_obj ", cordra_submit_obj);
+
+        this.downloadMappingExport(sssom_json_ld, "sssom");
       } else this.exportRDF(this.fileExtension); // TODO: better an else with a warning
     },
   },

@@ -157,10 +157,10 @@
           :options="tree.options.source"
           :alwaysOpen="true"
           :open-direction="'bottom'"
-          :default-expand-level="100"
+          :load-options="loadOntologyChild"
         />
         <!-- :load-options="loadOntologyChild" -->
-        <!-- :default-expand-level="1" -->
+        <!-- :default-expand-level="100" -->
       </div>
       <div class="column" />
 
@@ -201,10 +201,10 @@
           :options="tree.options.target"
           :alwaysOpen="true"
           :open-direction="'bottom'"
-          :default-expand-level="100"
+          :load-options="loadOntologyChild"
         />
         <!-- :load-options="loadOntologyChild" -->
-        <!-- :default-expand-level="2" -->
+        <!-- :default-expand-level="100" -->
       </div>
     </div>
   </div>
@@ -278,7 +278,7 @@ export default {
         classes: { source: {}, target: {} }, // A helper object to indicate unused classes (owl:Class) for error recognition
       },
       query: query, // external stored queries for a better readability
-      queueCount: 0,
+      // queueCount: 0, // Using for debug functionality
 
       dropdownSelectedItem: 0,
       dropdownItems: [
@@ -315,17 +315,18 @@ export default {
     // Load
     loadOntology(event, position) /**/ {
       console.group("loadOntology", position);
+      var time_test; // TODO:Delete me after the test and optimization
 
       let message = { content: "Loading data", kind: "primary" };
       this.newMessage(message);
 
-      // Reset the widget
+      // Reset the widgets and data
       this.resetArrows();
 
-      this.tree.options[position] = []; // Reset Nodes in the tree
+      this.tree.options[position] = []; // Reset Nodes from the tree
       var tree_options = []; // temp structure
 
-      this.rdfObj.engines[position] = []; //
+      this.rdfObj.engines[position] = []; // Use an own engine for each position (source and target)
 
       // Load local files
       for (let file of event.target.files) {
@@ -335,6 +336,8 @@ export default {
         let mimeType = ""; // "text/turtle" or "application/rdf+xml"
 
         // Reader definition
+        time_test = new Date();
+
         reader.onload = async (e, that = this) => {
           // Inner functions
           async function step1_getAllClasses() {
@@ -367,9 +370,11 @@ export default {
           }
 
           async function step2_firstLevelClasses() {
-            //
+            console.log("Data loaded in sec:", (new Date() - time_test) / 1000);
+
             let tempBindingsStream = null;
 
+            // Select the query
             if (that.tree.skos_flag[position]) {
               tempBindingsStream = await that.rdfObj.engines[position][
                 idxEngine
@@ -379,12 +384,13 @@ export default {
                 idxEngine
               ].queryBindings(that.query.firstLevelClass_OWL);
             }
-            that.queueCount++;
+            // that.queueCount++;
 
+            // Catch data
             tempBindingsStream.on("data", (bindings) => {
               // console.log("bindings", bindings);
 
-              // detected class
+              // detected classes
               that.rdfObj.classes[position][
                 bindings.entries.hashmap.node.children[0].value.id
               ] = true;
@@ -396,8 +402,8 @@ export default {
                 ) + `_${position}`;
 
               var oldEneteryFlag = false;
-              // You can use only "@en" labels. On this way "en-US" is valid too
 
+              // You can use only "@en" labels. On this way "en-US" is valid too
               let labelValid =
                 (that.tree.skos_flag[position] &&
                   bindings.entries.hashmap.node.children[1].value.id.includes(
@@ -413,20 +419,31 @@ export default {
                 }
 
                 if (!oldEneteryFlag) {
-                  that
-                    .loadOntologyChild(that.cleanSuffix(id), position)
-                    .then((children) => {
-                      tree_options.push({
-                        id: id,
-                        label:
-                          bindings.entries.hashmap.node.children[1].value.id.replaceAll(
-                            '"',
-                            ""
-                          ),
-                        children: children,
-                        position: position, // for the sparql engine (source or engine, left or right) //TODO: do we still need it?
-                      });
-                    });
+                  // that
+                  //   .loadOntologyChild(that.cleanSuffix(id), position)
+                  //   .then((children) => {
+                  //     tree_options.push({
+                  //       id: id,
+                  //       label:
+                  //         bindings.entries.hashmap.node.children[1].value.id.replaceAll(
+                  //           '"',
+                  //           ""
+                  //         ),
+                  //       children: children,
+                  //       position: position, // for the sparql engine (source or engine, left or right) //TODO: do we still need it?
+                  //     });
+                  //   });
+
+                  tree_options.push({
+                    id: id,
+                    label:
+                      bindings.entries.hashmap.node.children[1].value.id.replaceAll(
+                        '"',
+                        ""
+                      ),
+                    children: null,
+                    position: position, // for the sparql engine (source or engine, left or right) //TODO: do we still need it?
+                  });
                 }
               }
             });
@@ -434,10 +451,15 @@ export default {
             tempBindingsStream.on("error", (error) => console.log(error));
 
             tempBindingsStream.on("end", () => {
+              console.log(
+                "Data and first level loaded in sec:",
+                (new Date() - time_test) / 1000
+              );
+
               console.log("tree_options", tree_options);
 
               that.tree.options[position] = tree_options;
-              that.queueCount--;
+              // that.queueCount--;
 
               console.log("step2_firstLevelClasses ready");
             });
@@ -461,10 +483,11 @@ export default {
 
           // Step 1 - detect all classes
           // At first for OWL
-          step1_getAllClasses();
+          // step1_getAllClasses();
 
           // Step 2 - detect all first level classes ( not a subclass from another one)
           // Chained from step 1
+          step2_firstLevelClasses();
 
           // Step 3 - detect all children-nodes
           // Chained from step 2
@@ -498,13 +521,20 @@ export default {
       return "ack";
     },
 
-    async loadOntologyChild(id, position) {
-      // console.group("loadOntologyChild", id);
+    async loadOntologyChild(param) {
+      // async loadOntologyChild(id, position) {
+
+      /*       Whenever an unloaded branch node gets expanded, 
+      loadOptions({ action, parentNode, callback, instanceId }) 
+      will be called, then you can perform the job requesting data from a remote server
+       */
+
+      // console.group("loadOntologyChild", param);
       var nodeChildren = [];
       var query = "";
 
-      // console.log("id", id);
-      // console.log("position", position);
+      var id = this.cleanSuffix(param.parentNode.id);
+      var position = param.parentNode.position;
 
       if (this.tree.skos_flag[position]) {
         query = this.query.subclassOf_SKOS.replaceAll("ID_HERE", id);
@@ -543,32 +573,45 @@ export default {
             }
           }
           if (!oldEneteryFlag && labelValid) {
-            this.loadOntologyChild(
-              bindings.entries.hashmap.node.children[1].value.id,
-              position
-            ).then((children) => {
-              nodeChildren.push({
-                id: childID,
-                label:
-                  bindings.entries.hashmap.node.children[0].value.id.replaceAll(
-                    '"',
-                    ""
-                  ),
-                children: children,
-                position: position, // for the sparql engine
-              });
+            // this.loadOntologyChild(
+            //   bindings.entries.hashmap.node.children[1].value.id,
+            //   position
+            // ).then((children) => {
+            //   nodeChildren.push({
+            //     id: childID,
+            //     label:
+            //       bindings.entries.hashmap.node.children[0].value.id.replaceAll(
+            //         '"',
+            //         ""
+            //       ),
+            //     children: children,
+            //     position: position, // for the sparql engine
+            //   });
+            // });
+
+            nodeChildren.push({
+              id: childID,
+              label:
+                bindings.entries.hashmap.node.children[0].value.id.replaceAll(
+                  '"',
+                  ""
+                ),
+              children: null,
+              position: position, // for the sparql engine
             });
           }
         });
         bindingsStream.on("end", () => {
           // console.log("nodeChildren .end", nodeChildren);
-          this.queueCount--;
-
+          // this.queueCount--;
           // return nodeChildren; // null if no one child or [children...]
           // return null; //nodeChildren; // null if no one child or [children...]
+
+          param.parentNode.children = nodeChildren;
+          param.callback();
         });
 
-        return nodeChildren;
+        // return nodeChildren;
       }
 
       // console.groupEnd();

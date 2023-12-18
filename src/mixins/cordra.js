@@ -120,9 +120,6 @@ export default {
     cordraCreateDocument(cordraObject) {
       let cordraClient = this.cordraCreateTemporaryClient();
 
-      console.log(cordraObject);
-      console.log(cordraClient);
-
       return cordraClient
         .create(cordraObject)
         .then((result) => {
