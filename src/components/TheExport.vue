@@ -1,4 +1,4 @@
-<!-- Here you go the "export" component with you create 
+<!-- Here you go the "export" component with you create
 the exported data and the file output.
 You can also enter the author, licence and other informations, if necessary. -->
 
@@ -26,9 +26,32 @@ You can also enter the author, licence and other informations, if necessary. -->
     </div>
 
     <div class="field">
-      <label class="label">License</label>
       <div class="control">
-        <input class="input" type="text" v-model="license" />
+        <o-field label="License:" variant="">
+          <o-dropdown aria-role="list" v-model="license_dropdown.selected_item">
+            <template #trigger="{ active }">
+              <o-button variant="primary">
+                <span>{{
+                  license_dropdown.items[license_dropdown.selected_item]
+                }}</span>
+
+                <o-icon
+                  pack="fa"
+                  :icon="active ? 'chevron-down' : 'chevron-up'"
+                ></o-icon>
+              </o-button>
+            </template>
+
+            <o-dropdown-item
+              v-for="(item, key) in license_dropdown.items"
+              :key="key"
+              :value="key"
+              aria-role="listitem"
+            >
+              {{ license_dropdown.items[key] }}</o-dropdown-item
+            >
+          </o-dropdown>
+        </o-field>
       </div>
     </div>
 
@@ -47,12 +70,14 @@ You can also enter the author, licence and other informations, if necessary. -->
 
 <script setup>
 import { mapMutations, mapGetters } from "vuex";
+import CordraMixin from "@/mixins/cordra";
 
 // RDF
-import rdf from "@rdfjs/data-model";
+import rdf_data_model from "@rdfjs/data-model";
 
 // Export RDF
 import { Readable } from "readable-stream";
+import formats from "@rdfjs/formats-common";
 
 import prefixes from "@zazuko/rdf-vocabularies/prefixes";
 
@@ -61,6 +86,8 @@ import {
   rdfXml,
   jsonld,
 } from "@rdfjs-elements/formats-pretty/serializers";
+
+import SerializerJsonld from "@rdfjs/serializer-jsonld-ext";
 
 import getStream from "get-stream";
 </script>
@@ -77,318 +104,487 @@ export default {
       author: "",
       mappingSetTitle: "",
       comment: "",
-      license: "",
+
+      license_dropdown: {
+        selected_item: 0,
+        items: [
+          "CC BY 4.0",
+          "CC BY-NC 4.0",
+          "CC BY-NC-ND 4.0",
+          "CC BY-NC-SA 4.0",
+          "CC BY-ND 4.0",
+          "CC BY-SA 4.0",
+        ],
+        links: [
+          "https://creativecommons.org/licenses/by/4.0/",
+          "https://creativecommons.org/licenses/by-nc/4.0/",
+          "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+          "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+          "https://creativecommons.org/licenses/by-nd/4.0/",
+          "https://creativecommons.org/licenses/by-sa/4.0/",
+        ],
+      },
     };
   },
+  mixins: [CordraMixin],
 
   computed: {
     ...mapGetters({ getMappingtable: "mappingtable/getMappingtable" }),
   },
 
   methods: {
-    ...mapMutations({}), // Later maybe we need a error message
+    ...mapMutations({}), // Later maybe we need an error message
 
-    async exportSSSOM() /**OK */ {
-      console.group("exportSSSOM");
+    async create_sssom_ttl() {
+      /* Description: */
+
+      console.group("create_sssom_ttl");
+      var sssom_json_ld = await this.create_sssom_json_ld();
+
+      // Convert to ttl
+      var quads = []; // Storage for parsed sssom
+      var ttl_export_stream;
+      var ttl_export = "";
+
+      const quad_parse_json = formats.parsers.import(
+        "application/ld+json",
+        Readable.from(JSON.stringify(sssom_json_ld))
+      );
+
+      quad_parse_json.on("data", (quad) => quads.push(quad));
+      quad_parse_json.on("prefix", (prefix, ns) => quads.push(prefix, ns)); // TODO: Copy from Cordra
+
+      quad_parse_json.on("end", () => {
+        ttl_export_stream = formats.serializers.import(
+          "text/turtle",
+          Readable.from(quads)
+        );
+
+        ttl_export_stream.on("data", (data) => (ttl_export += data));
+        ttl_export_stream.on(
+          "end",
+          // () => null
+          console.log("ttl_export", ttl_export)
+        );
+      });
+
+      console.groupEnd();
+    },
+
+    async create_sssom_json_ld() {
+      console.group("create_jsonLD_export");
+      const XSDDateURI = rdf_data_model.namedNode(
+        "http://www.w3.org/2001/XMLSchema#date"
+      );
 
       var input = [];
       var mappingSet = [];
       var singleMappings = [];
       var singleMappingsIDs = [];
 
+      const sssom_json_ld = {
+        "@id": "",
+        "@type": "",
+        comment: "",
+        license: "",
+
+        mapping_date: "",
+        mapping_provider: "",
+        mapping_set_id: "",
+
+        mapping_set_source: [],
+
+        mapping_set_title: "",
+        mapping_set_version: "",
+        mapping_tool: "",
+        mapping_tool_version: "",
+
+        mappings: [],
+      };
+
       // Clean data
       for (var idxSource in this.getMappingtable) {
         var clean_idxSource = this.cleanSuffix(idxSource);
+
         for (var idxTarget of Object.keys(this.getMappingtable[idxSource])) {
           var clean_idxTarget = this.cleanSuffix(idxTarget);
+          const single_node = {
+            "@mapping_set_id": "",
+            // "@type": "",
+            // comment: "",
+            // mapping_cardinality: "",
+          };
 
           // Create mapping node
+
           input.push(
-            rdf.quad(
-              rdf.namedNode(clean_idxSource),
-              rdf.namedNode(
-                this.getMappingtable[idxSource][idxTarget]["relation"]
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(clean_idxSource),
+              rdf_data_model.namedNode(
+                this.getMappingtable[idxSource][idxTarget]["relation"].replace(
+                  "skos:",
+                  "http://www.w3.org/2004/02/skos/core#"
+                )
               ),
-              rdf.namedNode(clean_idxTarget)
+              rdf_data_model.namedNode(clean_idxTarget)
             )
           );
 
           // Discribe mapping
+
           let singleMappingsID = `${clean_idxSource}_${clean_idxTarget}`;
+
+          single_node["@id"] = singleMappingsID;
+          // TODO: remove later
           singleMappingsIDs.push(singleMappingsID);
 
+          single_node["@type"] = "sssom:Mapping";
+          // TODO: remove later
           singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("rdf:type"),
-              rdf.namedNode("owl:Axiom")
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode(
+                "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+              ),
+              rdf_data_model.namedNode("https://w3id.org/sssom/Mapping")
+            )
+          );
+
+          single_node["@comment"] =
+            this.getMappingtable[idxSource][idxTarget]["comment"];
+          // TODO: remove later
+          singleMappings.push(
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode(
+                "http://www.w3.org/2000/01/rdf-schema#comment"
+              ),
+              rdf_data_model.literal(
+                this.getMappingtable[idxSource][idxTarget]["comment"]
+              )
             )
           );
 
           singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:comment"),
-              rdf.literal(this.getMappingtable[idxSource][idxTarget]["comment"])
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/confidence"),
+              rdf_data_model.literal("empty here") // TODO: link data here
+            )
+          );
+
+          single_node["last_updated"] = new Date().toUTCString();
+          // TODO: remove later
+          singleMappings.push(
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(`${clean_idxSource}_${clean_idxTarget}`),
+              rdf_data_model.namedNode("https://w3id.org/sssom/last_updated"),
+              rdf_data_model.literal(new Date().toUTCString())
+            )
+          );
+
+          single_node["mapping_cardinality"] = "empty here"; // TODO: check and put here (1:1 or 1:n. Any other comopsition is not available)
+          // TODO: remove later
+          singleMappings.push(
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode(
+                "https://w3id.org/sssom/mapping_cardinality"
+              ),
+              rdf_data_model.literal("empty here")
             )
           );
 
           singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:confidence"),
-              rdf.literal("empty here") // TODO: link data here
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("http://purl.org/pav/authoredOn"),
+              rdf_data_model.literal(
+                new Date().toISOString().split("T")[0],
+                undefined,
+                XSDDateURI
+              )
+            )
+            // TODO: Use the creation date here, if there is an available
+          );
+
+          singleMappings.push(
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/mappings"),
+              rdf_data_model.literal(`[${clean_idxSource}, ${clean_idxTarget}`)
             )
           );
 
           singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(`${clean_idxSource}_${clean_idxTarget}`),
-              rdf.namedNode("sssom:last_updated"),
-              rdf.literal(new Date().toUTCString())
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/object_id"),
+              rdf_data_model.literal(clean_idxTarget)
+            )
+          );
+          singleMappings.push(
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/object_label"),
+              rdf_data_model.literal("Put label here") // TODO: Put label here
             )
           );
 
           singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:mapping_cardinality"),
-              rdf.literal("empty here") // TODO: check and put here (1:1 or 1:n. Any other comopsition is not available)
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:mapping_date"),
-              rdf.literal("empty here") // TODO: Use the creation date here
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:mappings"),
-              rdf.literal(`[${clean_idxSource}, ${clean_idxTarget}`)
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:object_id"),
-              rdf.literal(clean_idxTarget)
-            )
-          );
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:object_label"),
-              rdf.literal("Put label here") // TODO: Put label here
-            )
-          );
-
-          singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:predicate_id"),
-              rdf.literal(
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/predicate_id"),
+              rdf_data_model.literal(
                 this.getMappingtable[idxSource][idxTarget]["relation"]
               )
             )
           );
 
           singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:subject_id"),
-              rdf.literal(clean_idxSource)
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/subject_id"),
+              rdf_data_model.literal(clean_idxSource)
             )
           );
           singleMappings.push(
-            rdf.quad(
-              rdf.blankNode(singleMappingsID),
-              rdf.namedNode("sssom:subject_label"),
-              rdf.literal("Put label here") // TODO: Put label here
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(singleMappingsID),
+              rdf_data_model.namedNode("https://w3id.org/sssom/subject_label"),
+              rdf_data_model.literal("Put label here") // TODO: Put label here
             )
           );
+
+          sssom_json_ld["mappings"].push(single_node);
         }
       }
 
       // Create mapping set here
+      sssom_json_ld["@id"] = "MappingSet";
+      sssom_json_ld["@type"] = "MappingSet";
+      sssom_json_ld["comment"] = this.comment;
+      sssom_json_ld["license"] =
+        this.license_dropdown.items[this.license_dropdown.selected_item];
+
+      sssom_json_ld["mapping_date"] = ""; // TODO
+      sssom_json_ld["mapping_provider"] = "https://mapping.bio";
+      sssom_json_ld["mapping_set_id"] = ""; // Handling by Cordra
+
+      sssom_json_ld["mapping_set_source"] = []; // TODO
+
+      sssom_json_ld["mapping_set_title"] = ""; // TODO:
+      sssom_json_ld["mapping_set_version"] = ""; // TODO
+      sssom_json_ld["mapping_tool"] = "mapping.bio";
+      sssom_json_ld["mapping_tool_version"] = this.versionMapper;
+
       mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("rdf:type"),
-          rdf.literal("sssom:MappingSet")
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/author_label"),
+          rdf_data_model.literal(this.author)
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:author_label"),
-          rdf.literal(this.author)
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/imports"),
+          rdf_data_model.literal("")
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_tool"),
-          rdf.literal("mapping.bio")
-        )
-      );
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_tool_version"),
-          rdf.literal(this.versionMapper)
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/last_updated"),
+          rdf_data_model.literal(new Date().toUTCString())
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_provider"),
-          rdf.literal("https://mapping.bio")
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("http://purl.org/pav/authoredOn"),
+          rdf_data_model.literal(
+            new Date().toISOString().split("T")[0],
+            undefined,
+            XSDDateURI
+          )
+          // TODO: Use the creation date here, if there is an available
+          // Note: The SSSOM JSON Schema requires a date string in format yyyy-MM-dd
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:comment"),
-          rdf.literal(this.comment)
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode(
+            "https://w3id.org/sssom/mapping_registry_description"
+          ),
+          rdf_data_model.literal("")
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:imports"),
-          rdf.literal("")
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode(
+            "https://w3id.org/sssom/mapping_registry_id"
+          ),
+          rdf_data_model.literal("")
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:last_updated"),
-          rdf.literal(new Date().toUTCString())
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode(
+            "https://w3id.org/sssom/mapping_registry_title"
+          ),
+          rdf_data_model.literal("")
         )
       );
 
       mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:license"),
-          rdf.literal(this.license)
-        )
-      );
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("https://w3id.org/sssom/mapping_set_id"),
+          rdf_data_model.namedNode("http://mapping.example") // TODO: a bigger part to do. Use the old one if available
+          // NOTE: SSSOM requires a namedNode here, not a literal .
+          // NOTE: On the server-side (Cordra) the mapping_set_id value gets anyway
+          // overwritten with the generated Cordra ID.
 
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_date"),
-          rdf.literal(new Date().toUTCString()) // TODO: Use the creation date here, if there is an available
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_registry_description"),
-          rdf.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_registry_id"),
-          rdf.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_registry_title"),
-          rdf.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_set_id"),
-          rdf.literal("") // TODO: a bigger part to do. Use the old one if available
+          // TODO: Take care about edited mappings
         )
       );
       mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_set_source"),
-          rdf.literal("") // TODO: open discussion
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("http://www.w3.org/ns/prov#wasDerivedFrom"),
+          rdf_data_model.namedNode("http://exampleDerived") // TODO: open discussion
+          // NOTE: SSSOM requires a namedNode here, not a literal .
         )
       );
       mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_set_title"),
-          rdf.literal(this.mappingSetTitle)
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("http://purl.org/dc/terms/title"),
+          rdf_data_model.literal(this.mappingSetTitle)
         )
       );
       mappingSet.push(
-        rdf.quad(
-          rdf.blankNode("MappingSet"),
-          rdf.namedNode("sssom:mapping_set_version"),
-          rdf.literal("") // TODO: Format?
+        rdf_data_model.quad(
+          rdf_data_model.namedNode("MappingSet"),
+          rdf_data_model.namedNode("http://www.w3.org/2002/07/owl#versionInfo"),
+          rdf_data_model.literal("") // TODO: Format?
         )
       );
 
       // include single mappings
       for (var item of singleMappingsIDs) {
+        console.log("item", item);
         mappingSet.push(
-          rdf.quad(
-            rdf.blankNode("MappingSet"),
-            rdf.namedNode("sssom:mappings"),
-            rdf.blankNode(item)
+          rdf_data_model.quad(
+            rdf_data_model.namedNode("MappingSet"),
+            rdf_data_model.namedNode("https://w3id.org/sssom/mappings"),
+            rdf_data_model.namedNode(item)
           )
         );
       }
 
-      const { schema, dcterms, foaf, rdfs, skos, owl } = prefixes;
-      const sssom = "https://w3id.org/sssom/";
-
       var runExportFlag = true;
-
-      var sink = await turtle({
-        // var sink = await rdfXml({
-        // var sink = await jsonld({
-        prefixes: {
-          schema,
-          dcterms,
-          foaf,
-          rdfs,
-          skos,
-          owl,
-          sssom,
-        },
-      });
-      // console.log("sink", sink);
 
       if (runExportFlag) {
         var exportArray = input.concat(mappingSet).concat(singleMappings);
-        console.log("exportArray", exportArray);
+        // console.log("exportArray", exportArray);
 
-        console.log("Try to create a stream with sink");
-        const stream = await sink.import(Readable.from(exportArray));
+        let readable = Readable.from(exportArray);
 
-        let content = await getStream(stream);
-        console.log("Content created", content);
-        this.downloadMappingExport(content, "sssom"); // TODO: set json later
+        const sssom_context =
+          "https://raw.githubusercontent.com/mapping-commons/sssom/0.15.0/src/sssom_schema/context/sssom_schema.context.jsonld";
+        const context = { "@context": sssom_context };
+
+        const serializerJsonld = new SerializerJsonld({
+          baseIRI: "http://example.org/",
+          context,
+          // compact: true,
+          frame: {
+            "@context": sssom_context,
+            "@type": "MappingSet",
+          },
+          // encoding: "string",
+          prettyPrint: true,
+        });
+
+        console.log("-- test jsonld --");
+        console.log("serializer", serializerJsonld);
+        console.log("readable", readable);
+
+        const output = serializerJsonld.import(readable);
+
+        output.on("data", (jsonldGraph) => {
+          console.log("jsonldGraph created");
+          console.log("");
+
+          // as soon as there are several IRIs in the output, the serializer
+          // produces a JSON-LD @graph structure. However, the first element
+          // shoult be the MappingSet according to JSON-LD frame, so we are
+          // only interested in this
+          const jsonld = jsonldGraph["@graph"][0];
+
+          // There are several wrong properties which in the SSSOM Schema are not
+          // allowed on type MappingSet, see: https://mapping-commons.github.io/sssom/MappingSet/
+          // Provisionally delete them here, but they should be completely removed from the code
+          delete jsonld["mapping_registry_description"];
+          delete jsonld["mapping_registry_title"];
+          delete jsonld["sssom:imports"];
+          delete jsonld["sssom:last_updated"];
+          delete jsonld["sssom:mapping_registry_id"];
+
+          // "author_label" is also wrong on MappingSet but should be defined on
+          // the individual mapping see https://mapping-commons.github.io/sssom/author_label/
+          delete jsonld["author_label"];
+
+          // The following bug is strange:
+          // The specific datatype declaration as XSDDateURI for "pav:authoredOn"
+          // does not seem to be acknowledged by the json-ld serializer, and
+          // therefore the json-ld context does not make the correct alias
+          // replacement with "mapping_date".
+          // Provisional fix:
+          if ("pav:authoredOn" in jsonld) {
+            jsonld["mapping_date"] = jsonld["pav:authoredOn"];
+            delete jsonld["pav:authoredOn"];
+
+            sssom_json_ld["mapping_date"] = jsonld["pav:authoredOn"];
+          }
+          if ("mappings" in jsonld) {
+            const mappings = jsonld["mappings"];
+            if (Array.isArray(mappings)) {
+              mappings.forEach((mapping) => {
+                if ("pav:authoredOn" in mapping) {
+                  mapping["mapping_date"] = mapping["pav:authoredOn"];
+                  sssom_json_ld["mapping_date"] = mapping["pav:authoredOn"];
+
+                  delete mapping["pav:authoredOn"];
+
+                  // TODO: implement for sssom_json_ld
+                }
+              });
+            }
+          }
+
+          // The following seems to have no other option, more a bug in the SSOM / LinkML schema:
+          if ("mapping_set_source" in jsonld) {
+            const mapping_set_source = jsonld["mapping_set_source"];
+            if (!Array.isArray(mapping_set_source)) {
+              jsonld["mapping_set_source"] = [mapping_set_source];
+            }
+          }
+
+          console.log("sssom_json_ld", sssom_json_ld);
+          return sssom_json_ld;
+        });
       }
 
       console.groupEnd();
@@ -431,18 +627,18 @@ export default {
 
         if (!labelReady.includes(rowElement)) {
           // input.push(
-          //   rdf.quad(
-          //     rdf.namedNode("owl:class"),
-          //     rdf.namedNode("rdf:about"),
-          //     rdf.literal(`${cleanElement}`)
+          //   rdf_data_model.quad(
+          //     rdf_data_model.namedNode("owl:class"),
+          //     rdf_data_model.namedNode("rdf:about"),
+          //     rdf_data_model.literal(`${cleanElement}`)
           //   )
           // );
           //   // Create new label
           input.push(
-            rdf.quad(
-              rdf.namedNode(`${cleanElement}`),
-              rdf.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
-              rdf.literal(this.getMappingtable[idxSource][idxTarget][title])
+            rdf_data_model.quad(
+              rdf_data_model.namedNode(`${cleanElement}`),
+              rdf_data_model.namedNode("http://www.w3.org/2000/01/rdf-schema#label"),
+              rdf_data_model.literal(this.getMappingtable[idxSource][idxTarget][title])
             )
           );
           labelReady.push(rowElement);
@@ -451,49 +647,67 @@ export default {
 
       var mappingIndex = 2;
       var input = [
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-          rdf.namedNode(`http://purl.obolibrary.org/obo/envo.owl#Alignment`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+          ),
+          rdf_data_model.namedNode(
+            `http://purl.obolibrary.org/obo/envo.owl#Alignment`
+          )
         ),
         // TODO: Hier nur für XML
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#xml"),
-          rdf.literal(`yes`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://purl.obolibrary.org/obo/envo.owl#xml"
+          ),
+          rdf_data_model.literal(`yes`)
         ),
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#level"),
-          rdf.literal(`0`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://purl.obolibrary.org/obo/envo.owl#level"
+          ),
+          rdf_data_model.literal(`0`)
         ),
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#type"),
-          rdf.literal(`??`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://purl.obolibrary.org/obo/envo.owl#type"
+          ),
+          rdf_data_model.literal(`??`)
         ),
 
         // TODO: currently static only
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#onto1"),
-          rdf.literal(`http://data.bioontology.org/ontologies/ENVO`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://purl.obolibrary.org/obo/envo.owl#onto1"
+          ),
+          rdf_data_model.literal(`http://data.bioontology.org/ontologies/ENVO`)
         ),
 
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#onto2"),
-          rdf.literal(`http://data.bioontology.org/ontologies/SWEET`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://purl.obolibrary.org/obo/envo.owl#onto2"
+          ),
+          rdf_data_model.literal(`http://data.bioontology.org/ontologies/SWEET`)
         ),
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#uri1"),
-          rdf.literal(`http://data.bioontology.org/ontologies/ENVO`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://purl.obolibrary.org/obo/envo.owl#uri1"
+          ),
+          rdf_data_model.literal(`http://data.bioontology.org/ontologies/ENVO`)
         ),
-        rdf.quad(
-          rdf.blankNode(`genid1`),
-          rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#uri2"),
-          rdf.literal(`http://data.bioontology.org/ontologies/SWEET`)
+        rdf_data_model.quad(
+          rdf_data_model.blankNode(`genid1`),
+          rdf_data_model.namedNode(
+            "http://purl.obolibrary.org/obo/envo.owl#uri2"
+          ),
+          rdf_data_model.literal(`http://data.bioontology.org/ontologies/SWEET`)
         ),
       ];
 
@@ -505,39 +719,53 @@ export default {
 
           //Map
           input.push(
-            rdf.quad(
-              rdf.blankNode(`genid1`),
-              rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#map"),
-              rdf.blankNode(`genid${mappingIndex}`)
+            rdf_data_model.quad(
+              rdf_data_model.blankNode(`genid1`),
+              rdf_data_model.namedNode(
+                "http://purl.obolibrary.org/obo/envo.owl#map"
+              ),
+              rdf_data_model.blankNode(`genid${mappingIndex}`)
             )
           );
 
           //Cell
           var cell = [
-            rdf.quad(
-              rdf.blankNode(`genid${mappingIndex}`),
-              rdf.namedNode("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-              rdf.literal(`http://purl.obolibrary.org/obo/envo.owl#Cell`)
+            rdf_data_model.quad(
+              rdf_data_model.blankNode(`genid${mappingIndex}`),
+              rdf_data_model.namedNode(
+                "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+              ),
+              rdf_data_model.literal(
+                `http://purl.obolibrary.org/obo/envo.owl#Cell`
+              )
             ),
-            rdf.quad(
-              rdf.blankNode(`genid${mappingIndex}`),
-              rdf.namedNode("purl.obolibrary.org/obo/envo.owl#entity1"),
-              rdf.literal(`${clean_idxSource}`)
+            rdf_data_model.quad(
+              rdf_data_model.blankNode(`genid${mappingIndex}`),
+              rdf_data_model.namedNode(
+                "purl.obolibrary.org/obo/envo.owl#entity1"
+              ),
+              rdf_data_model.literal(`${clean_idxSource}`)
             ),
-            rdf.quad(
-              rdf.blankNode(`genid${mappingIndex}`),
-              rdf.namedNode("purl.obolibrary.org/obo/envo.owl#entity2"),
-              rdf.literal(`${clean_idxTarget}`)
+            rdf_data_model.quad(
+              rdf_data_model.blankNode(`genid${mappingIndex}`),
+              rdf_data_model.namedNode(
+                "purl.obolibrary.org/obo/envo.owl#entity2"
+              ),
+              rdf_data_model.literal(`${clean_idxTarget}`)
             ),
-            rdf.quad(
-              rdf.blankNode(`genid${mappingIndex}`),
-              rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#measure"),
-              rdf.literal(`1`)
+            rdf_data_model.quad(
+              rdf_data_model.blankNode(`genid${mappingIndex}`),
+              rdf_data_model.namedNode(
+                "http://purl.obolibrary.org/obo/envo.owl#measure"
+              ),
+              rdf_data_model.literal(`1`)
             ),
-            rdf.quad(
-              rdf.blankNode(`genid${mappingIndex}`),
-              rdf.namedNode("http://purl.obolibrary.org/obo/envo.owl#relation"),
-              rdf.literal(
+            rdf_data_model.quad(
+              rdf_data_model.blankNode(`genid${mappingIndex}`),
+              rdf_data_model.namedNode(
+                "http://purl.obolibrary.org/obo/envo.owl#relation"
+              ),
+              rdf_data_model.literal(
                 `${this.getMappingtable[idxSource][idxTarget]["relation"]}`
               )
             ),
@@ -623,14 +851,25 @@ export default {
 
       exportElement.download = `Mapping_Table.${fileExtension}`;
       exportElement.click();
+
+      this.$emit("openClose", "close");
     },
 
-    exportMapping() /**OK */ {
+    async exportMapping() {
       if (this.fileExtension === "csv") {
         this.exportCSV();
       } else if (this.fileExtension == "sssom") {
-        this.exportSSSOM();
-      } else this.exportRDF(this.fileExtension);
+        let sssom_json_ld = await this.create_sssom_json_ld();
+
+        var cordra_submit_obj = this.cordraCreateDocument({
+          type: "MappingSet",
+          content: sssom_json_ld,
+        });
+
+        // console.log("cordra cordra_submit_obj ", cordra_submit_obj);
+
+        this.downloadMappingExport(sssom_json_ld, "sssom");
+      } else this.exportRDF(this.fileExtension); // TODO: better an else with a warning
     },
   },
 };

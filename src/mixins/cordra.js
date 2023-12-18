@@ -32,14 +32,28 @@ export default {
       hideLoader: "loader/hideLoader",
     }),
 
+    check_mixin() {
+      /* Description: */
+
+      console.group("check_mixin");
+
+      console.log("Cordra mixin works well");
+
+      console.groupEnd();
+      return true;
+    },
+
     cordraCreateTemporaryClient() {
-      if (this.$keycloak_token()) {
-        return new CordraClient(process.env.VUE_APP_CORDRA_URL, {
-          token: this.$keycloak_token(),
-        });
-      } else {
-        return new CordraClient(process.env.VUE_APP_CORDRA_URL);
-      }
+      // if (this.$keycloak_token()) {
+      //   return new CordraClient(process.env.VUE_APP_CORDRA_URL, {
+      //     token: this.$keycloak_token(),
+      //   });
+      // } else {
+      return new CordraClient(process.env.VUE_APP_CORDRA_URL, {
+        username: process.env.VUE_APP_CORDRA_USER,
+        password: process.env.VUE_APP_CORDRA_PW,
+      });
+      // }
     },
 
     cordraSearch() {
@@ -109,7 +123,7 @@ export default {
       return cordraClient
         .create(cordraObject)
         .then((result) => {
-          this.hideLoader();
+          // this.hideLoader();
 
           let message = {
             content: "Success, a new dataset was reported.",
@@ -120,12 +134,14 @@ export default {
           return result;
         })
         .catch((error) => {
-          let message = {
-            content: error,
-            kind: "danger",
-          };
-          this.newMessage(message);
-          this.hideLoader();
+          console.log("ERROR create doc", error);
+
+          // let message = {
+          //   content: error,
+          //   kind: "danger",
+          // };
+          // this.newMessage(message);
+          // this.hideLoader();
           return false;
         });
     },
