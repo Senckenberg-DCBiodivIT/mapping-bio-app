@@ -29,6 +29,30 @@
           <div class="column is-10"><table id="mapppingtable" /></div>
           <div class="column is-one" />
         </div>
+
+        <div class="columns">
+          <div class="column has-text-centered">
+            <o-button
+              :label="'Load a 1-row mapping example'"
+              @click="load_mapping_example('one')"
+              :variant="'warning'"
+            />
+          </div>
+          <div class="column has-text-centered">
+            <o-button
+              :label="'Load a 3-row mapping example'"
+              @click="load_mapping_example('three')"
+              :variant="'warning'"
+            />
+          </div>
+          <div class="column has-text-centered">
+            <o-button
+              :label="'Load 5-row mapping example'"
+              @click="load_mapping_example('five')"
+              :variant="'warning'"
+            />
+          </div>
+        </div>
       </div>
     </o-collapse>
   </section>
@@ -37,6 +61,7 @@
 <script setup>
 // Mapping table
 import AppendGrid from "jquery.appendgrid";
+import { mapping_example } from "@/components/mapping_example";
 
 // Store
 import { mapMutations, mapGetters } from "vuex";
@@ -61,6 +86,7 @@ export default {
 
       rdfEngine: {},
 
+      mapping_example: mapping_example,
       mappingDataTableConfig: [
         {
           name: "relation",
@@ -164,6 +190,19 @@ export default {
       updateMapping: "mappingtable/updateMapping",
     }),
 
+    load_mapping_example(kind) {
+      /* Description: Here you can load an example without external sources. 
+      This functionality is used for debugging and manual testing.
+      
+      Note: It's possible to implement this inline, but we prefer to use a single function.
+      */
+
+      // console.group("load_mapping_example(), load", kind);
+
+      this.setMappingtable(this.mapping_example[kind]);
+      // console.groupEnd();
+    },
+
     showArrowFromMappingtable() {
       // TODO
     },
@@ -179,6 +218,8 @@ export default {
       */
 
       // console.group("refreshMappingtableUI");
+      // console.log("this.getMappingtable", this.getMappingtable);
+
       var currentState = [];
       // console.log("this.mappingtable", this.mappingtable);
 

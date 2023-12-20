@@ -42,6 +42,7 @@ const mappingtable = {
       };
 
       state.mappingtable = tempMappingtable;
+      console.log("tempMappingtable", tempMappingtable);
     },
 
     updateMapping(state, value) {
