@@ -199,9 +199,8 @@ export default {
       Note: It's possible to implement this inline, but we prefer to use a single function.
       */
 
-      // console.group("load_mapping_example(), load", kind);
-
-      this.setMappingtable(this.mapping_example[kind]);
+      let default_copy = JSON.parse(JSON.stringify(this.mapping_example[kind]));
+      this.setMappingtable(default_copy);
       // console.groupEnd();
     },
 
