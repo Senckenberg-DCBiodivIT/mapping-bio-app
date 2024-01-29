@@ -143,8 +143,13 @@
               <span class="file-label">Choose a RDF/XML or TTL file…</span>
             </span>
             <span class="file-name" v-if="hasSourceFileName"
-              >{{ sourceFilename }}
-            </span>
+              >{{ sourceFilename }} </span
+            >&nbsp;
+            <o-button
+              :label="'...or load a short example'"
+              @click="load_onto_example('source')"
+              :variant="'warning'"
+            />
           </label>
         </div>
 
@@ -189,6 +194,12 @@
             <span class="file-name" v-if="hasTargetFileName"
               >{{ targetFilename }}
             </span>
+            &nbsp;
+            <o-button
+              :label="'...or load a short example'"
+              @click="load_onto_example('target')"
+              :variant="'warning'"
+            />
           </label>
         </div>
 
@@ -227,6 +238,7 @@ import TheMessenger from "@/components/TheMessenger";
 import TheMappingtable from "@/components/TheMappingtable";
 // import TheTreeStructure from "@/components/TheTreeStructure";
 import TheExport from "@/components/TheExport";
+import { onto_example } from "@/components/onto_example";
 
 // import vuex mutations
 import { mapMutations } from "vuex";
@@ -257,6 +269,8 @@ export default {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
     return {
+      onto_example: onto_example,
+
       updateHeightIntervall: false,
       openCloseSecondStepView: "close", // this is the export component. Use 'open' or 'close'
 
@@ -313,6 +327,24 @@ export default {
     }),
 
     // Load
+    load_onto_example(position) {
+      /* Description: Here you can load an example instead of an external source
+        position = 'source' or 'target'
+      */
+
+      console.group("load_onto_example", position);
+
+      // Reset the widgets and data
+      this.resetArrows();
+
+      this.tree.options[position] = []; // Reset Nodes from the tree
+      this.rdfObj.engines[position] = []; // Use an own engine for each position (source and target)
+
+      // Set new value
+      this.tree.options[position] = this.onto_example[position];
+      console.groupEnd();
+    },
+
     loadOntology(event, position) /**/ {
       console.group("loadOntology", position);
       var time_test; // TODO:Delete me after the test and optimization
@@ -459,6 +491,7 @@ export default {
               console.log("tree_options", tree_options);
 
               that.tree.options[position] = tree_options;
+
               // that.queueCount--;
 
               console.log("step2_firstLevelClasses ready");
@@ -610,8 +643,6 @@ export default {
           param.parentNode.children = nodeChildren;
           param.callback();
         });
-
-        // return nodeChildren;
       }
 
       // console.groupEnd();

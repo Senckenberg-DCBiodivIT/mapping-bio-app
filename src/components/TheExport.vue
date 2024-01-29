@@ -136,12 +136,14 @@ export default {
     ...mapMutations({}), // Later maybe we need an error message
 
     async create_sssom_ttl() {
-      /* Description: */
+      /* Description: Use create_sssom_json_ld and convert the result*/
 
       console.group("create_sssom_ttl");
+
+      // Step 1, reate SSSOM
       var sssom_json_ld = await this.create_sssom_json_ld();
 
-      // Convert to ttl
+      // Step 2, convert to ttl
       var quads = []; // Storage for parsed sssom
       var ttl_export_stream;
       var ttl_export = "";
@@ -154,6 +156,7 @@ export default {
       quad_parse_json.on("data", (quad) => quads.push(quad));
       quad_parse_json.on("prefix", (prefix, ns) => quads.push(prefix, ns)); // TODO: Copy from Cordra
 
+      // Step 3, serializer
       quad_parse_json.on("end", () => {
         ttl_export_stream = formats.serializers.import(
           "text/turtle",
@@ -165,6 +168,7 @@ export default {
           "end",
           // () => null
           console.log("ttl_export", ttl_export)
+          // TODO: Step 4, send to Cordra or download a file
         );
       });
 
@@ -172,6 +176,9 @@ export default {
     },
 
     async create_sssom_json_ld() {
+      /*
+      Here we create a SSSOM JSON Object to use them for Cordra or other needs
+      */
       console.group("create_jsonLD_export");
       const XSDDateURI = rdf_data_model.namedNode(
         "http://www.w3.org/2001/XMLSchema#date"
