@@ -38,13 +38,13 @@
               :variant="'warning'"
             />
           </div>
-          <div class="column has-text-centered">
+          <!-- <div class="column has-text-centered">
             <o-button
               :label="'Load a 3-row mapping example'"
               @click="load_mapping_example('three')"
               :variant="'warning'"
             />
-          </div>
+          </div> -->
           <div class="column has-text-centered">
             <o-button
               :label="'Load 5-row mapping example'"

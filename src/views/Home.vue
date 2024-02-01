@@ -76,6 +76,7 @@
 
     <div class="column is-1" />
   </div>
+  <br />
 
   <!-- Debug -->
   <!-- this.test.queueCount: {{ test.queueCount }} -->
