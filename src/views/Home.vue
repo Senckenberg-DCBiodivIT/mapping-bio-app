@@ -4,7 +4,7 @@
   <!-- mappping table, CSV, RDF projection -->
   <TheMappingtable />
 
-  <!-- Buttons for mapings (choose, show and export) 
+  <!-- Buttons for mapings (choose, show and export)
   TODO: an own component or inline? -->
   <div class="columns has-text-centered">
     <div class="column is-1" />
@@ -124,6 +124,13 @@
       <!-- Component source tree view -->
       <div class="column is-4">
         <!-- Button -->
+        <o-field label="Expressivity" variant="primary">
+          <o-select v-model="expressivity.source">
+            <option value="skos">SKOS</option>
+            <option value="rdfs">RDFS</option>
+            <option value="owl">OWL</option>
+          </o-select>
+        </o-field>
         <div
           class="file is-primary is-centered"
           :class="{ 'has-name': hasSourceFileName }"
@@ -137,6 +144,7 @@
               name="resume"
               @change="(e) => loadOntology(e, 'source')"
             />
+
             <span class="file-cta">
               <span class="file-icon">
                 <i class="fa fa-upload"></i>
@@ -173,6 +181,14 @@
       <!-- Component target tree view -->
       <div class="column is-4">
         <!-- Button -->
+
+        <o-field label="Expressivity" variant="primary">
+          <o-select v-model="expressivity.target">
+            <option value="skos">SKOS</option>
+            <option value="rdfs">RDFS</option>
+            <option value="owl">OWL</option>
+          </o-select>
+        </o-field>
         <div
           class="file is-primary is-centered"
           :class="{ 'has-name': hasTargetFileName }"
@@ -270,6 +286,7 @@ export default {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
     return {
+      expressivity: { source: "owl", target: "owl" },
       onto_example: onto_example,
 
       updateHeightIntervall: false,
@@ -285,7 +302,6 @@ export default {
         value: { source: [], target: [] }, // selected items
         options: { source: [], target: [] }, // tree content
         reloadKey: { source: 0, target: 0 }, // reload index for VUE reloads
-        skos_flag: { source: false, target: false }, // we need to modify queries if it's a skos notation
       },
 
       rdfObj: {
@@ -408,21 +424,23 @@ export default {
             let tempBindingsStream = null;
 
             // Select the query
-            if (that.tree.skos_flag[position]) {
+            if (that.expressivity[position] === "skos") {
               tempBindingsStream = await that.rdfObj.engines[position][
                 idxEngine
               ].queryBindings(that.query.firstLevelClass_SKOS);
-            } else {
+            } else if (that.expressivity[position] === "owl") {
               tempBindingsStream = await that.rdfObj.engines[position][
                 idxEngine
               ].queryBindings(that.query.firstLevelClass_OWL);
+            } else {
+              tempBindingsStream = await that.rdfObj.engines[position][
+                idxEngine
+              ].queryBindings(that.query.firstLevelClass_RDFS);
             }
             // that.queueCount++;
 
             // Catch data
             tempBindingsStream.on("data", (bindings) => {
-              // console.log("bindings", bindings);
-
               // detected classes
               that.rdfObj.classes[position][
                 bindings.entries.hashmap.node.children[0].value.id
@@ -435,14 +453,13 @@ export default {
                 ) + `_${position}`;
 
               var oldEneteryFlag = false;
-
               // You can use only "@en" labels. On this way "en-US" is valid too
               let labelValid =
-                (that.tree.skos_flag[position] &&
+                (that.expressivity[position] === "skos" &&
                   bindings.entries.hashmap.node.children[1].value.id.includes(
                     "@en"
                   )) ||
-                !that.tree.skos_flag[position];
+                that.expressivity[position] !== "skos";
 
               if (labelValid) {
                 for (var treeItem of tree_options) {
@@ -511,10 +528,6 @@ export default {
           that.rdfObj.engines[position].push(new Engine(store));
           let idxEngine = that.rdfObj.engines[position].length - 1;
 
-          // Detect if skos
-          this.tree.skos_flag[position] =
-            e.target.result.includes("xmlns:skos");
-
           // Step 1 - detect all classes
           // At first for OWL
           // step1_getAllClasses();
@@ -536,7 +549,11 @@ export default {
           reader.readAsText(file);
         }
         // RDF/XML
-        else if (fileExtension == "rdf" || fileExtension == "xml") {
+        else if (
+          fileExtension == "rdf" ||
+          fileExtension == "xml" ||
+          fileExtension == "owl"
+        ) {
           console.log("RDF detected");
           mimeType = "application/rdf+xml";
           reader.readAsText(file);
@@ -558,8 +575,8 @@ export default {
     async loadOntologyChild(param) {
       // async loadOntologyChild(id, position) {
 
-      /*       Whenever an unloaded branch node gets expanded, 
-      loadOptions({ action, parentNode, callback, instanceId }) 
+      /*       Whenever an unloaded branch node gets expanded,
+      loadOptions({ action, parentNode, callback, instanceId })
       will be called, then you can perform the job requesting data from a remote server
        */
 
@@ -570,7 +587,7 @@ export default {
       var id = this.cleanSuffix(param.parentNode.id);
       var position = param.parentNode.position;
 
-      if (this.tree.skos_flag[position]) {
+      if (this.expressivity[position] === "skos") {
         query = this.query.subclassOf_SKOS.replaceAll("ID_HERE", id);
       } else {
         query = this.query.subclassOf_OWL.replaceAll("ID_HERE", id);
@@ -594,11 +611,11 @@ export default {
 
           // You can use only "@en" labels. On this way "en-US" is valid too
           let labelValid =
-            (this.tree.skos_flag[position] &&
+            (this.expressivity[position] === "skos" &&
               bindings.entries.hashmap.node.children[0].value.id.includes(
                 "@en"
               )) ||
-            !this.tree.skos_flag[position];
+            !this.expressivity[position] !== "skos";
           if (labelValid) {
             for (var treeItem of nodeChildren) {
               if (treeItem.id == id) {
