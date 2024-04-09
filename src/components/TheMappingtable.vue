@@ -29,6 +29,30 @@
           <div class="column is-10"><table id="mapppingtable" /></div>
           <div class="column is-one" />
         </div>
+
+        <div class="columns">
+          <div class="column has-text-centered">
+            <o-button
+              :label="'Load a 1-row mapping example'"
+              @click="load_mapping_example('one')"
+              :variant="'warning'"
+            />
+          </div>
+          <!-- <div class="column has-text-centered">
+            <o-button
+              :label="'Load a 3-row mapping example'"
+              @click="load_mapping_example('three')"
+              :variant="'warning'"
+            />
+          </div> -->
+          <div class="column has-text-centered">
+            <o-button
+              :label="'Load 5-row mapping example'"
+              @click="load_mapping_example('five')"
+              :variant="'warning'"
+            />
+          </div>
+        </div>
       </div>
     </o-collapse>
   </section>
@@ -37,6 +61,7 @@
 <script setup>
 // Mapping table
 import AppendGrid from "jquery.appendgrid";
+import { mapping_example } from "@/components/mapping_example";
 
 // Store
 import { mapMutations, mapGetters } from "vuex";
@@ -61,6 +86,8 @@ export default {
 
       rdfEngine: {},
 
+      mapping_example: mapping_example,
+      currentState: [],
       mappingDataTableConfig: [
         {
           name: "relation",
@@ -162,7 +189,20 @@ export default {
     ...mapMutations({
       setMappingtable: "mappingtable/setMappingtable",
       updateMapping: "mappingtable/updateMapping",
+      deleteMappingRow: "mappingtable/deleteMappingRow",
     }),
+
+    load_mapping_example(kind) {
+      /* Description: Here you can load an example without external sources. 
+      This functionality is used for debugging and manual testing.
+      
+      Note: It's possible to implement this inline, but we prefer to use a single function.
+      */
+
+      let default_copy = JSON.parse(JSON.stringify(this.mapping_example[kind]));
+      this.setMappingtable(default_copy);
+      // console.groupEnd();
+    },
 
     showArrowFromMappingtable() {
       // TODO
@@ -179,13 +219,15 @@ export default {
       */
 
       // console.group("refreshMappingtableUI");
-      var currentState = [];
+      // console.log("this.getMappingtable", this.getMappingtable);
+
+      this.currentState = [];
       // console.log("this.mappingtable", this.mappingtable);
 
       for (var idxSource in this.getMappingtable) {
         // console.log("idxSource", idxSource);
         for (var idxTarget of Object.keys(this.getMappingtable[idxSource])) {
-          currentState.push({
+          this.currentState.push({
             relation: this.getMappingtable[idxSource][idxTarget]["relation"]
               .replaceAll("(", "")
               .replaceAll(")", ""),
@@ -202,11 +244,11 @@ export default {
 
       // console.log("currentState", currentState);
 
-      if (currentState.length == 0) {
+      if (this.currentState.length == 0) {
         window.mappingDataTable.load([[]]);
         window.mappingDataTable.removeRow(0);
       } else {
-        window.mappingDataTable.load(currentState);
+        window.mappingDataTable.load(this.currentState);
       }
 
       // console.groupEnd();
@@ -355,29 +397,53 @@ export default {
         this.setMappingtable(mappingtable);
       });
     },
+
+    createMappingDataTable() {
+      /* Description: */
+
+      console.group("createMappingDataTable");
+
+      delete window.mappingDataTable;
+
+      window.mappingDataTable = new AppendGrid({
+        element: document.getElementById("mapppingtable"),
+        initRows: 0,
+        uiFramework: "bulma",
+        iconFramework: "default",
+        hideButtons: {
+          // Hide some buttons on each row
+          moveUp: true,
+          moveDown: true,
+          insert: true,
+          append: true,
+          removeLast: true,
+        },
+        columns: this.mappingDataTableConfig,
+
+        beforeRowRemove: (caller, rowIndex, that = this) => {
+          if (that.currentState.length > 0) {
+            let removeMapping = {
+              sourceLink: that.currentState[rowIndex].sourceLink,
+              targetLink: that.currentState[rowIndex].targetLink,
+            };
+            that.deleteMappingRow(removeMapping);
+          } else {
+            that.setMappingtable(null);
+            that.createMappingDataTable();
+          }
+        },
+
+        sectionClasses: {
+          table: "is-narrow is-fullwidth",
+        },
+      });
+
+      console.groupEnd();
+    },
   },
 
   async mounted() {
-    // console.log("mount mappingtable");
-
-    window.mappingDataTable = new AppendGrid({
-      element: document.getElementById("mapppingtable"),
-      initRows: 0,
-      uiFramework: "bulma",
-      iconFramework: "default",
-      hideButtons: {
-        // Hide some buttons on each row
-        moveUp: true,
-        moveDown: true,
-        insert: true,
-        append: true,
-        removeLast: true,
-      },
-      columns: this.mappingDataTableConfig,
-      sectionClasses: {
-        table: "is-narrow is-fullwidth",
-      },
-    });
+    this.createMappingDataTable();
   },
 
   watch: {

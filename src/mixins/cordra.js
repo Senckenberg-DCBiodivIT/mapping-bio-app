@@ -120,6 +120,10 @@ export default {
     cordraCreateDocument(cordraObject) {
       let cordraClient = this.cordraCreateTemporaryClient();
 
+      console.log("");
+      console.log("cordraCreateDocument", cordraObject);
+      console.log("");
+
       return cordraClient
         .create(cordraObject)
         .then((result) => {
@@ -129,7 +133,7 @@ export default {
             content: "Success, a new dataset was reported.",
             kind: "primary",
           };
-          this.newMessage(message);
+          // this.newMessage(message); TODO: Set a message
 
           return result;
         })
