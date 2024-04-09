@@ -124,13 +124,7 @@
       <!-- Component source tree view -->
       <div class="column is-4">
         <!-- Button -->
-        <o-field label="Expressivity" variant="primary">
-          <o-select v-model="expressivity.source">
-            <option value="skos">SKOS</option>
-            <option value="rdfs">RDFS</option>
-            <option value="owl">OWL</option>
-          </o-select>
-        </o-field>
+
         <div
           class="file is-primary is-centered"
           :class="{ 'has-name': hasSourceFileName }"
@@ -154,6 +148,14 @@
             <span class="file-name" v-if="hasSourceFileName"
               >{{ sourceFilename }} </span
             >&nbsp;
+            <o-field variant="primary">
+              <o-select v-model="expressivity.source">
+                <option value="skos">SKOS</option>
+                <option value="rdfs">RDFS</option>
+                <option value="owl">OWL</option>
+              </o-select>
+            </o-field>
+            &nbsp;
             <o-button
               :label="'...or load a short example'"
               @click="load_onto_example('source')"
@@ -182,13 +184,6 @@
       <div class="column is-4">
         <!-- Button -->
 
-        <o-field label="Expressivity" variant="primary">
-          <o-select v-model="expressivity.target">
-            <option value="skos">SKOS</option>
-            <option value="rdfs">RDFS</option>
-            <option value="owl">OWL</option>
-          </o-select>
-        </o-field>
         <div
           class="file is-primary is-centered"
           :class="{ 'has-name': hasTargetFileName }"
@@ -212,6 +207,16 @@
               >{{ targetFilename }}
             </span>
             &nbsp;
+
+            <o-field variant="primary">
+              <o-select v-model="expressivity.target">
+                <option value="skos">SKOS</option>
+                <option value="rdfs">RDFS</option>
+                <option value="owl">OWL</option>
+              </o-select>
+            </o-field>
+            &nbsp;
+
             <o-button
               :label="'...or load a short example'"
               @click="load_onto_example('target')"
