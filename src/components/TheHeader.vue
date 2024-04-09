@@ -13,6 +13,32 @@
         <router-link to="imprint" class="ownFont mappingBioLogo"
           >Imprint</router-link
         >
+
+        <div class="buttons" style="margin-left: 1em">
+          <div v-if="!$store.getters['keycloak/getStatusReady']">
+            <a class="button is-light has-text-black has-text-weight-semibold"
+              >Connecting server</a
+            >
+          </div>
+          <div v-else>
+            <div v-if="$store.getters['keycloak/getStatusAuthenticated']">
+              <a
+                :href="$keycloakLogoutLink()"
+                class="button is-success has-text-white has-text-weight-semibold"
+              >
+                <strong>Logout</strong>
+              </a>
+            </div>
+            <div v-else>
+              <a
+                :href="$keycloakLoginLink()"
+                class="button is-primary has-text-white has-text-weight-semibold"
+              >
+                <strong>Login</strong>
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="column">
