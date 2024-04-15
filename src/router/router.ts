@@ -23,5 +23,11 @@ export default createRouter({
 
       component: () => import("../views/Imprint.vue"),
     },
+    {
+      path: "/mappingset/:id([a-zA-Z0-9.]+/[a-zA-Z0-9]+)",
+      name: "Show a single mappingset instance",
+
+      component: () => import("@/views/MappingSetLandingPage.vue"), // Schema
+    },
   ],
 });
