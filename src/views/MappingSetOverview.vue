@@ -50,6 +50,7 @@
                             :key="creator_id"
                           >
                             <a :href="creator_id">{{
+                              Array.isArray(item.content.creator_label) &&
                               item.content.creator_label[i]
                                 ? item.content.creator_label[i]
                                 : creator_id

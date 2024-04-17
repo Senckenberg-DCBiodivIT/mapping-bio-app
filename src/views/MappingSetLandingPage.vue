@@ -8,36 +8,71 @@
           {{ cordraObject.content.mapping_set_title }}
         </div>
       </nav>
-
-      <o-field label="Type">MappingSet</o-field>
-      <o-field label="Created on">
-        {{ new Date(cordraObject.metadata.createdOn) }}</o-field
-      >
-      <o-field label="Description">
-        {{ cordraObject.content.mapping_set_description }}</o-field
-      >
-      <o-field label="License"> {{ cordraObject.content.license }}</o-field>
-      <o-field label="Creator"
-        ><div v-if="cordraObject.content.creator_id">
-          <div
-            v-for="(creator_id, i) in cordraObject.content.creator_id"
-            :key="creator_id"
+      <div class="columns">
+        <div class="column is-10">
+          <o-field label="Type">MappingSet</o-field>
+          <o-field label="PID"
+            ><a :href="'https://hdl.handle.net/' + cordraObject.id">
+              hdl:{{ cordraObject.id }}</a
+            ></o-field
           >
-            <a :href="creator_id">{{
-              cordraObject.content.creator_label[i]
-                ? cordraObject.content.creator_label[i]
-                : creator_id
-            }}</a>
-          </div>
+          <o-field label="Created on">
+            {{ new Date(cordraObject.metadata.createdOn) }}</o-field
+          >
+          <o-field label="Description">
+            {{ cordraObject.content.mapping_set_description }}</o-field
+          >
+          <o-field label="License"> {{ cordraObject.content.license }}</o-field>
+          <o-field label="Creator"
+            ><div v-if="cordraObject.content.creator_id">
+              <div
+                v-for="(creator_id, i) in cordraObject.content.creator_id"
+                :key="creator_id"
+              >
+                <a :href="creator_id">{{
+                  Array.isArray(cordraObject.content.creator_label) &&
+                  cordraObject.content.creator_label[i]
+                    ? cordraObject.content.creator_label[i]
+                    : creator_id
+                }}</a>
+              </div>
+            </div>
+            <div
+              v-else
+              v-for="creator_label in cordraObject.content.creator_label"
+              :key="creator_label"
+            >
+              {{ creator_label }}
+            </div>
+          </o-field>
         </div>
-        <div
-          v-else
-          v-for="creator_label in cordraObject.content.creator_label"
-          :key="creator_label"
-        >
-          {{ creator_label }}
+        <div class="column is-2">
+          <p>
+            <a
+              class="button is-primary"
+              :href="getDownloadURL()"
+              download="mappingset_sssom.json"
+              >Download SSSOM</a
+            >
+          </p>
+          <p>
+            <a
+              class="button is-secondary"
+              :href="getROCrateURL()"
+              target="_blank"
+              >Get as RO-Crate</a
+            >
+          </p>
+          <p>
+            <a
+              class="button is-secondary"
+              :href="'http://hdl.handle.net/' + cordraObject.id + '?noredirect'"
+              target="_blank"
+              >Inspect FDO Record</a
+            >
+          </p>
         </div>
-      </o-field>
+      </div>
 
       <TheMappingtable :isModifiable="false" :isNew="false" />
     </div>
@@ -79,6 +114,18 @@ export default {
       return predicate_id.replace(
         "http://www.w3.org/2004/02/skos/core#",
         "skos:"
+      );
+    },
+    getDownloadURL() {
+      return (
+        process.env.VUE_APP_CORDRA_URL + "/objects/" + this.cordraObject.id
+      );
+    },
+    getROCrateURL() {
+      return (
+        process.env.VUE_APP_CORDRA_URL +
+        "/call?method=getAsROCrate&objectId=" +
+        this.cordraObject.id
       );
     },
   },
