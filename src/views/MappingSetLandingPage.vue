@@ -39,7 +39,7 @@
         </div>
       </o-field>
 
-      <TheMappingtable />
+      <TheMappingtable :isModifiable="false" :isNew="false" />
     </div>
 
     <div class="column is-1"></div>
@@ -73,10 +73,18 @@ export default {
     // vuex store
     ...mapMutations({
       addMappingItem: "mappingtable/addMappingItem",
+      setMappingtable: "mappingtable/setMappingtable",
     }),
+    mapRelationURIToLabel(predicate_id) {
+      return predicate_id.replace(
+        "http://www.w3.org/2004/02/skos/core#",
+        "skos:"
+      );
+    },
   },
 
   created() {
+    this.setMappingtable(null);
     this.cordraCreateTemporaryClient()
       .get(this.objectID)
       .then((result) => {
@@ -87,7 +95,7 @@ export default {
             right: mapping.object_id,
             sourceTitle: mapping.subject_label,
             targetTitle: mapping.object_label,
-            relation: mapping.predicate_label,
+            relation: this.mapRelationURIToLabel(mapping.predicate_id),
             comment: "",
           };
           if (mappingValue.relation === undefined) {

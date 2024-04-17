@@ -30,7 +30,7 @@
           <div class="column is-one" />
         </div>
 
-        <div class="columns">
+        <div class="columns" v-if="isNew">
           <div class="column has-text-centered">
             <o-button
               :label="'Load a 1-row mapping example'"
@@ -78,6 +78,16 @@ import { query } from "@/components/query";
 <script>
 export default {
   name: "TheMappingtable",
+  props: {
+    isModifiable: {
+      type: Boolean,
+      default: true,
+    },
+    isNew: {
+      type: Boolean,
+      default: true,
+    },
+  },
   data() {
     return {
       query: query, // external stored queries for a better readability
@@ -101,6 +111,7 @@ export default {
             "skos:narrowMatch",
             "skos:relatedMatch",
           ],
+          ctrlAttr: this.isModifiable ? {} : { disabled: true },
           events: {
             change: (e, that = this) => {
               that.updateMappingValue(e.uniqueIndex, "relation");
@@ -193,9 +204,9 @@ export default {
     }),
 
     load_mapping_example(kind) {
-      /* Description: Here you can load an example without external sources. 
+      /* Description: Here you can load an example without external sources.
       This functionality is used for debugging and manual testing.
-      
+
       Note: It's possible to implement this inline, but we prefer to use a single function.
       */
 
@@ -417,6 +428,7 @@ export default {
           insert: true,
           append: true,
           removeLast: true,
+          remove: !this.isModifiable,
         },
         columns: this.mappingDataTableConfig,
 

@@ -46,10 +46,10 @@
           mapping.bio Mapping Service V. {{ version }}
         </div>
         <div class="buttons" style="margin-left: 1em">
-          <a
+          <router-link
             class="button is-secondary has-text-white has-text-weight-semibold"
-            href="/mappingsets"
-            >Browse existing mappings</a
+            :to="'/mappingsets'"
+            >Browse existing mappings</router-link
           >
         </div>
       </div>

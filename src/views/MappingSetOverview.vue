@@ -33,12 +33,38 @@
                 <div class="card-content">
                   <div class="media">
                     <div class="media-content">
-                      <p class="title is-4">{{ item.id }}</p>
-                      <p class="subtitle is-6">
-                        Title: {{ item.content.mapping_set_title }}
+                      <p class="title is-4">
+                        Title:
+                        <span v-if="item.content.mapping_set_title">
+                          {{ item.content.mapping_set_title }}</span
+                        >
+                        <span v-else class="is-italic">No title</span>
                       </p>
+                      <p class="subtitle is-6">{{ item.id }}</p>
                       <p>Mappings: {{ item.content.mappings.length }}</p>
-                      <p>Creator: {{ item.content.creator_label }}</p>
+                      <p>
+                        Creator:
+                        <span v-if="item.content.creator_id">
+                          <span
+                            v-for="(creator_id, i) in item.content.creator_id"
+                            :key="creator_id"
+                          >
+                            <a :href="creator_id">{{
+                              item.content.creator_label[i]
+                                ? item.content.creator_label[i]
+                                : creator_id
+                            }}</a>
+                          </span>
+                        </span>
+                        <span
+                          v-else
+                          v-for="creator_label in item.content.creator_label"
+                          :key="creator_label"
+                        >
+                          {{ creator_label }}
+                        </span>
+                      </p>
+                      <p>Created: {{ new Date(item.metadata.createdOn) }}</p>
                     </div>
                   </div>
 
