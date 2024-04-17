@@ -44,16 +44,13 @@ export default {
     },
 
     cordraCreateTemporaryClient() {
-      // if (this.$keycloak_token()) {
-      //   return new CordraClient(process.env.VUE_APP_CORDRA_URL, {
-      //     token: this.$keycloak_token(),
-      //   });
-      // } else {
-      return new CordraClient(process.env.VUE_APP_CORDRA_URL, {
-        username: process.env.VUE_APP_CORDRA_USER,
-        password: process.env.VUE_APP_CORDRA_PW,
-      });
-      // }
+      if (this.$keycloak_token()) {
+        return new CordraClient(process.env.VUE_APP_CORDRA_URL, {
+          token: this.$keycloak_token(),
+        });
+      } else {
+        return new CordraClient(process.env.VUE_APP_CORDRA_URL);
+      }
     },
 
     cordraSearch() {
