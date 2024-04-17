@@ -45,6 +45,13 @@
         <div class="has-text-centered ownFont bigText testfooter">
           mapping.bio Mapping Service V. {{ version }}
         </div>
+        <div class="buttons" style="margin-left: 1em">
+          <a
+            class="button is-secondary has-text-white has-text-weight-semibold"
+            href="/mappingsets"
+            >Browse existing mappings</a
+          >
+        </div>
       </div>
 
       <div class="column is-3 has-text-right">
