@@ -72,6 +72,9 @@
           {{ dropdownExportFormat[key] }}</o-dropdown-item
         >
       </o-dropdown>
+      <p v-if="!$store.getters['keycloak/keycloakAuthenticated']">
+        -Login in order to save mappings-
+      </p>
     </div>
 
     <div class="column is-1" />
@@ -290,6 +293,28 @@ export default {
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
+    const dropdownExportFormat = [
+      "Export",
+      "CSV",
+      "RDF/XML",
+      "RDF/TTL",
+      // "RDF/JSON-LD (tbc)",
+      // "SSSOM (TTL)",
+      "SSSOM/JSON-LD",
+    ];
+    const dropdownExtension = [
+      "",
+      "csv",
+      "rdf",
+      "ttl",
+      // "json",
+      // "sssom",
+      "sssom",
+    ];
+    if (this.$store.getters["keycloak/keycloakAuthenticated"]) {
+      dropdownExportFormat.push("Save in repository");
+      dropdownExtension.push("save");
+    }
     return {
       expressivity: { source: "owl", target: "owl" },
       onto_example: onto_example,
@@ -325,27 +350,9 @@ export default {
         "skos:narrowMatch",
         "skos:relatedMatch",
       ],
+      dropdownExportFormat: dropdownExportFormat,
+      dropdownExtension: dropdownExtension,
 
-      dropdownExportFormat: [
-        "Export",
-        "CSV",
-        "RDF/XML",
-        "RDF/TTL",
-        // "RDF/JSON-LD (tbc)",
-        // "SSSOM (TTL)",
-        "SSSOM/JSON-LD",
-        "Save in repository",
-      ],
-      dropdownExtension: [
-        "",
-        "csv",
-        "rdf",
-        "ttl",
-        // "json",
-        // "sssom",
-        "sssom",
-        "save",
-      ],
       dropdownExportFormatItem: 0,
     };
   },
