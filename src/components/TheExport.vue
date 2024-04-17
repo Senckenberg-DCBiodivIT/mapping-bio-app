@@ -62,7 +62,9 @@ You can also enter the author, licence and other informations, if necessary. -->
         >
       </div>
       <div class="column has-text-centered">
-        <o-button variant="primary" @click="exportMapping">Download</o-button>
+        <o-button variant="primary" @click="exportMapping">{{
+          fileExtension === "save" ? "Save" : "Download"
+        }}</o-button>
       </div>
     </div>
   </form>
@@ -869,21 +871,27 @@ export default {
       this.$emit("openClose", "close");
     },
 
+    async saveMappingSetInRepo() {
+      let sssom_json_ld = await this.create_sssom_json_ld();
+      // Create Document in Cordra
+      var cordra_submit_obj = this.cordraCreateDocument({
+        type: "MappingSet",
+        content: sssom_json_ld,
+      }).then((createdObject) => {
+        if (createdObject.id) {
+          this.$router.push({ path: "/mappingsets/" + createdObject.id });
+        }
+      });
+    },
+
     async exportMapping() {
       if (this.fileExtension === "csv") {
         this.exportCSV();
-      } else if (this.fileExtension == "sssom") {
+      } else if (this.fileExtension === "sssom") {
         let sssom_json_ld = await this.create_sssom_json_ld();
-
-        // Create Document in Cordra
-        var cordra_submit_obj = this.cordraCreateDocument({
-          type: "MappingSet",
-          content: sssom_json_ld,
-        });
-
-        // console.log("cordra cordra_submit_obj ", cordra_submit_obj);
-
         this.downloadMappingExport(JSON.stringify(sssom_json_ld), "sssom");
+      } else if (this.fileExtension === "save") {
+        this.saveMappingSetInRepo();
       } else this.exportRDF(this.fileExtension); // TODO: better an else with a warning
     },
   },
