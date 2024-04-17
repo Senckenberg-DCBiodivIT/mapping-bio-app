@@ -72,7 +72,7 @@
           {{ dropdownExportFormat[key] }}</o-dropdown-item
         >
       </o-dropdown>
-      <p v-if="!$store.getters['keycloak/keycloakAuthenticated']">
+      <p v-if="!$store.getters['keycloak/getStatusAuthenticated']">
         -Login in order to save mappings-
       </p>
     </div>
@@ -289,32 +289,8 @@ import { query } from "@/components/query";
 <script>
 export default {
   name: "Home-SGN",
-  // mixins: [CordraMixin],
 
-  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   data() {
-    const dropdownExportFormat = [
-      "Export",
-      "CSV",
-      "RDF/XML",
-      "RDF/TTL",
-      // "RDF/JSON-LD (tbc)",
-      // "SSSOM (TTL)",
-      "SSSOM/JSON-LD",
-    ];
-    const dropdownExtension = [
-      "",
-      "csv",
-      "rdf",
-      "ttl",
-      // "json",
-      // "sssom",
-      "sssom",
-    ];
-    if (this.$store.getters["keycloak/keycloakAuthenticated"]) {
-      dropdownExportFormat.push("Save in repository");
-      dropdownExtension.push("save");
-    }
     return {
       expressivity: { source: "owl", target: "owl" },
       onto_example: onto_example,
@@ -350,8 +326,6 @@ export default {
         "skos:narrowMatch",
         "skos:relatedMatch",
       ],
-      dropdownExportFormat: dropdownExportFormat,
-      dropdownExtension: dropdownExtension,
 
       dropdownExportFormatItem: 0,
     };
@@ -902,6 +876,42 @@ export default {
     },
     hasTargetFileName() {
       return this.targetFilename != "" ? true : false;
+    },
+
+    dropdownExportFormat() {
+      console.log(
+        "dat",
+        this.$store.getters["keycloak/getStatusAuthenticated"]
+      );
+      const _dropdownExportFormat = [
+        "Export",
+        "CSV",
+        "RDF/XML",
+        "RDF/TTL",
+        // "RDF/JSON-LD (tbc)",
+        // "SSSOM (TTL)",
+        "SSSOM/JSON-LD",
+      ];
+
+      if (this.$store.getters["keycloak/getStatusAuthenticated"]) {
+        _dropdownExportFormat.push("Save in repository");
+      }
+      return _dropdownExportFormat;
+    },
+    dropdownExtension() {
+      const _dropdownExtension = [
+        "",
+        "csv",
+        "rdf",
+        "ttl",
+        // "json",
+        // "sssom",
+        "sssom",
+      ];
+      if (this.$store.getters["keycloak/getStatusAuthenticated"]) {
+        _dropdownExtension.push("save");
+      }
+      return _dropdownExtension;
     },
   },
 
