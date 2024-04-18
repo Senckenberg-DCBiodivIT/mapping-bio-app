@@ -52,7 +52,7 @@ keycloak
   })
   .finally(() => {
     // hide the loader which is shown per default
-    appObj._context.provides.store.commit("loader/hideLoader", true);
+    // appObj._context.provides.store.commit("loader/hideLoader", true);
   });
 
 export default {
@@ -73,8 +73,18 @@ export default {
       return keycloak.token;
     };
 
-    app.config.globalProperties.$keycloak_authorID = () => {
-      return keycloak.subject;
+    app.config.globalProperties.$keycloak_orcid = () => {
+      if (keycloak.tokenParsed) {
+        return keycloak.tokenParsed.preferred_username;
+      }
+      return "";
+    };
+
+    app.config.globalProperties.$keycloak_name = () => {
+      if (keycloak.tokenParsed) {
+        return keycloak.tokenParsed.name;
+      }
+      return "";
     };
   },
 };

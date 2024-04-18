@@ -3,8 +3,8 @@
     {{ headerStyle }}
     <div class="columns">
       <div class="column is-3">
-        <a href="https://mapping.bio" target="_blank"
-          ><img :src="mappingBioLogo" class="mappingBioLogo" /></a
+        <router-link to="/" target="_blank"
+          ><img :src="mappingBioLogo" class="mappingBioLogo" /></router-link
         ><br />
         <router-link to="imprint" class="ownFont mappingBioLogo"
           >About</router-link
@@ -44,6 +44,13 @@
       <div class="column">
         <div class="has-text-centered ownFont bigText testfooter">
           mapping.bio Mapping Service V. {{ version }}
+        </div>
+        <div class="buttons" style="margin-left: 1em">
+          <router-link
+            class="button is-secondary has-text-white has-text-weight-semibold"
+            :to="'/mappingsets'"
+            >Browse existing mappings</router-link
+          >
         </div>
       </div>
 
