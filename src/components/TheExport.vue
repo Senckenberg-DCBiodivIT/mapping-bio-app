@@ -314,16 +314,6 @@ export default {
             )
           );
 
-          single_node["last_updated"] = new Date().toUTCString();
-          // TODO: remove later
-          singleMappings.push(
-            rdf_data_model.quad(
-              rdf_data_model.namedNode(`${clean_idxSource}_${clean_idxTarget}`),
-              rdf_data_model.namedNode("https://w3id.org/sssom/last_updated"),
-              rdf_data_model.literal(new Date().toUTCString())
-            )
-          );
-
           single_node["mapping_cardinality"] = "empty here"; // TODO: check and put here (1:1 or 1:n. Any other comopsition is not available)
           // TODO: remove later
           singleMappings.push(
@@ -425,14 +415,6 @@ export default {
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("https://w3id.org/sssom/imports"),
-          rdf_data_model.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
           rdf_data_model.namedNode("https://w3id.org/sssom/last_updated"),
           rdf_data_model.literal(new Date().toUTCString())
         )
@@ -455,36 +437,6 @@ export default {
       mappingSet.push(
         rdf_data_model.quad(
           rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode(
-            "https://w3id.org/sssom/mapping_registry_description"
-          ),
-          rdf_data_model.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode(
-            "https://w3id.org/sssom/mapping_registry_id"
-          ),
-          rdf_data_model.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode(
-            "https://w3id.org/sssom/mapping_registry_title"
-          ),
-          rdf_data_model.literal("")
-        )
-      );
-
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
           rdf_data_model.namedNode("https://w3id.org/sssom/mapping_set_id"),
           rdf_data_model.namedNode("http://mapping.example") // TODO: a bigger part to do. Use the old one if available
           // NOTE: SSSOM requires a namedNode here, not a literal .
@@ -499,7 +451,6 @@ export default {
           rdf_data_model.namedNode("MappingSet"),
           rdf_data_model.namedNode("http://www.w3.org/ns/prov#wasDerivedFrom"),
           rdf_data_model.namedNode("http://exampleDerived") // TODO: open discussion
-          // NOTE: SSSOM requires a namedNode here, not a literal .
         )
       );
       mappingSet.push(
@@ -553,10 +504,6 @@ export default {
           prettyPrint: true,
         });
 
-        console.log("-- test jsonld --");
-        console.log("serializer", serializerJsonld);
-        console.log("readable", readable);
-
         const output = serializerJsonld.import(readable);
 
         output.on("data", (jsonldGraph) => {
@@ -568,19 +515,6 @@ export default {
           // shoult be the MappingSet according to JSON-LD frame, so we are
           // only interested in this
           const jsonld = jsonldGraph["@graph"][0];
-
-          // There are several wrong properties which in the SSSOM Schema are not
-          // allowed on type MappingSet, see: https://mapping-commons.github.io/sssom/MappingSet/
-          // Provisionally delete them here, but they should be completely removed from the code
-          delete jsonld["mapping_registry_description"];
-          delete jsonld["mapping_registry_title"];
-          delete jsonld["sssom:imports"];
-          delete jsonld["sssom:last_updated"];
-          delete jsonld["sssom:mapping_registry_id"];
-
-          // "author_label" is also wrong on MappingSet but should be defined on
-          // the individual mapping see https://mapping-commons.github.io/sssom/author_label/
-          delete jsonld["author_label"];
 
           // The following bug is strange:
           // The specific datatype declaration as XSDDateURI for "pav:authoredOn"
@@ -621,7 +555,9 @@ export default {
       }
 
       console.groupEnd();
-      return sssom_json_ld;
+      console.log(sssom_json_ld);
+      throw "asdfkj";
+      //return sssom_json_ld;
     },
 
     exportCSV() /**OK */ {
