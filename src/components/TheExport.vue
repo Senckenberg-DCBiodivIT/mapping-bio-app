@@ -95,8 +95,6 @@ import {
   jsonld,
 } from "@rdfjs-elements/formats-pretty/serializers";
 
-import SerializerJsonld from "@rdfjs/serializer-jsonld-ext";
-
 import getStream from "get-stream";
 </script>
 
@@ -189,14 +187,6 @@ export default {
       Here we create a SSSOM JSON Object to use them for Cordra or other needs
       */
       console.group("create_jsonLD_export");
-      const XSDDateURI = rdf_data_model.namedNode(
-        "http://www.w3.org/2001/XMLSchema#date"
-      );
-
-      var input = [];
-      var mappingSet = [];
-      var singleMappings = [];
-      var singleMappingsIDs = [];
 
       const sssom_json_ld = {
         "@id": "", // Handling by Cordra
@@ -204,15 +194,7 @@ export default {
         comment: this.comment,
         license:
           this.license_dropdown.items[this.license_dropdown.selected_item],
-
-        // The following bug is strange:
-        // The specific datatype declaration as XSDDateURI for "pav:authoredOn"
-        // does not seem to be acknowledged by the json-ld serializer, and
-        // therefore the json-ld context does not make the correct alias
-        // replacement with "mapping_date".
-        mapping_date: new Date().toISOString().split("T")[0], // TODO: Use the creation date here, if there is an available. Elswere set the current date.
-        // Note: The SSSOM JSON Schema requires a date string in format yyyy-MM-dd
-
+        mapping_date: new Date().toISOString().split("T")[0],
         mapping_provider: "https://mapping.bio",
         mapping_set_id: "", // Handling by Cordra
 
@@ -249,315 +231,12 @@ export default {
             see_also: [], // TODO: a new input field on the viz table?
           };
 
-          const single_node = {
-            "@mapping_set_id": "",
-            // "@type": "",
-            // comment: "",
-            // mapping_cardinality: "",
-          };
-
-          // Create mapping node
-
-          // input.push(
-          //   rdf_data_model.quad(
-          //     rdf_data_model.namedNode(clean_idxSource),
-          //     rdf_data_model.namedNode(
-          //       this.getMappingtable[idxSource][idxTarget]["relation"].replace(
-          //         "skos:",
-          //         "http://www.w3.org/2004/02/skos/core#"
-          //       )
-          //     ),
-          //     rdf_data_model.namedNode(clean_idxTarget)
-          //   )
-          // );
-
-          // Discribe mapping
-
-          let singleMappingsID = `${clean_idxSource}_${clean_idxTarget}`;
-
-          single_node["@id"] = singleMappingsID;
-          // TODO: remove later
-          singleMappingsIDs.push(singleMappingsID);
-
-          single_node["@type"] = "sssom:Mapping";
-          // TODO: remove later
-          singleMappings.push(
-            rdf_data_model.quad(
-              rdf_data_model.namedNode(singleMappingsID),
-              rdf_data_model.namedNode(
-                "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
-              ),
-              rdf_data_model.namedNode("https://w3id.org/sssom/Mapping")
-            )
-          );
-
-          // single_node["@comment"] =
-          //   this.getMappingtable[idxSource][idxTarget]["comment"];
-          // // TODO: remove later
-          // singleMappings.push(
-          //   rdf_data_model.quad(
-          //     rdf_data_model.namedNode(singleMappingsID),
-          //     rdf_data_model.namedNode(
-          //       "http://www.w3.org/2000/01/rdf-schema#comment"
-          //     ),
-          //     rdf_data_model.literal(
-          //       this.getMappingtable[idxSource][idxTarget]["comment"]
-          //     )
-          //   )
-          // );
-
-          singleMappings.push(
-            rdf_data_model.quad(
-              rdf_data_model.namedNode(singleMappingsID),
-              rdf_data_model.namedNode("https://w3id.org/sssom/confidence"),
-              rdf_data_model.literal("empty here") // TODO: link data here
-            )
-          );
-
-          single_node["mapping_cardinality"] = "empty here"; // TODO: check and put here (1:1 or 1:n. Any other comopsition is not available)
-          // TODO: remove later
-          singleMappings.push(
-            rdf_data_model.quad(
-              rdf_data_model.namedNode(singleMappingsID),
-              rdf_data_model.namedNode(
-                "https://w3id.org/sssom/mapping_cardinality"
-              ),
-              rdf_data_model.literal("empty here")
-            )
-          );
-
-          singleMappings.push(
-            rdf_data_model.quad(
-              rdf_data_model.namedNode(singleMappingsID),
-              rdf_data_model.namedNode("http://purl.org/pav/authoredOn"),
-              rdf_data_model.literal(
-                new Date().toISOString().split("T")[0],
-                undefined,
-                XSDDateURI
-              )
-            )
-            // TODO: Use the creation date here, if there is an available
-          );
-
-          singleMappings.push(
-            rdf_data_model.quad(
-              rdf_data_model.namedNode(singleMappingsID),
-              rdf_data_model.namedNode("https://w3id.org/sssom/mappings"),
-              rdf_data_model.literal(`[${clean_idxSource}, ${clean_idxTarget}`)
-            )
-          );
-
-          singleMappings.push(
-            rdf_data_model.quad(
-              rdf_data_model.namedNode(singleMappingsID),
-              rdf_data_model.namedNode("https://w3id.org/sssom/object_id"),
-              rdf_data_model.literal(clean_idxTarget)
-            )
-          );
-          singleMappings.push(
-            rdf_data_model.quad(
-              rdf_data_model.namedNode(singleMappingsID),
-              rdf_data_model.namedNode("https://w3id.org/sssom/object_label"),
-              rdf_data_model.literal("Put label here") // TODO: Put label here
-            )
-          );
-
-          singleMappings.push(
-            rdf_data_model.quad(
-              rdf_data_model.namedNode(singleMappingsID),
-              rdf_data_model.namedNode("https://w3id.org/sssom/predicate_id"),
-              rdf_data_model.literal(
-                this.getMappingtable[idxSource][idxTarget]["relation"]
-              )
-            )
-          );
-
-          singleMappings.push(
-            rdf_data_model.quad(
-              rdf_data_model.namedNode(singleMappingsID),
-              rdf_data_model.namedNode("https://w3id.org/sssom/subject_id"),
-              rdf_data_model.literal(clean_idxSource)
-            )
-          );
-          singleMappings.push(
-            rdf_data_model.quad(
-              rdf_data_model.namedNode(singleMappingsID),
-              rdf_data_model.namedNode("https://w3id.org/sssom/subject_label"),
-              rdf_data_model.literal("Put label here") // TODO: Put label here
-            )
-          );
-
           sssom_json_ld["mappings"].push(sssom_json_ld_temp_single_mapping);
         }
       }
 
-      // Create mapping set here
-
-      if (this.author) {
-        mappingSet.push(
-          rdf_data_model.quad(
-            rdf_data_model.namedNode("MappingSet"),
-            rdf_data_model.namedNode("https://w3id.org/sssom/creator_label"),
-            rdf_data_model.literal(this.author)
-          )
-        );
-      }
-      if (this.authorOrcid) {
-        mappingSet.push(
-          rdf_data_model.quad(
-            rdf_data_model.namedNode("MappingSet"),
-            rdf_data_model.namedNode("https://w3id.org/sssom/creator_label"),
-            rdf_data_model.literal("https://orcid.org/" + this.authorOrcid)
-          )
-        );
-      }
-
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("https://w3id.org/sssom/last_updated"),
-          rdf_data_model.literal(new Date().toUTCString())
-        )
-      );
-
-      // mappingSet.push(
-      //   rdf_data_model.quad(
-      //     rdf_data_model.namedNode("MappingSet"),
-      //     rdf_data_model.namedNode("http://purl.org/pav/authoredOn"),
-      //     rdf_data_model.literal(
-      //       new Date().toISOString().split("T")[0],
-      //       undefined,
-      //       XSDDateURI
-      //     )
-      //     // TODO: Use the creation date here, if there is an available
-      //     // Note: The SSSOM JSON Schema requires a date string in format yyyy-MM-dd
-      //   )
-      // );
-
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("https://w3id.org/sssom/mapping_set_id"),
-          rdf_data_model.namedNode("http://mapping.example") // TODO: a bigger part to do. Use the old one if available
-          // NOTE: SSSOM requires a namedNode here, not a literal .
-          // NOTE: On the server-side (Cordra) the mapping_set_id value gets anyway
-          // overwritten with the generated Cordra ID.
-
-          // TODO: Take care about edited mappings
-        )
-      );
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("http://www.w3.org/ns/prov#wasDerivedFrom"),
-          rdf_data_model.namedNode("http://exampleDerived") // TODO: open discussion
-        )
-      );
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("http://purl.org/dc/terms/title"),
-          rdf_data_model.literal(this.mapping_set_title)
-        )
-      );
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("http://www.w3.org/2002/07/owl#versionInfo"),
-          rdf_data_model.literal("") // TODO: Format?
-        )
-      );
-
-      // include single mappings
-      for (var item of singleMappingsIDs) {
-        console.log("item", item);
-        mappingSet.push(
-          rdf_data_model.quad(
-            rdf_data_model.namedNode("MappingSet"),
-            rdf_data_model.namedNode("https://w3id.org/sssom/mappings"),
-            rdf_data_model.namedNode(item)
-          )
-        );
-      }
-
-      var runExportFlag = true;
-
-      if (runExportFlag) {
-        var exportArray = input.concat(mappingSet).concat(singleMappings);
-        // console.log("exportArray", exportArray);
-
-        let readable = Readable.from(exportArray);
-
-        const sssom_context =
-          "https://raw.githubusercontent.com/mapping-commons/sssom/0.15.0/src/sssom_schema/context/sssom_schema.context.jsonld";
-        const context = { "@context": sssom_context };
-
-        const serializerJsonld = new SerializerJsonld({
-          baseIRI: "http://example.org/",
-          context,
-          // compact: true,
-          frame: {
-            "@context": sssom_context,
-            "@type": "MappingSet",
-          },
-          // encoding: "string",
-          prettyPrint: true,
-        });
-
-        const output = serializerJsonld.import(readable);
-
-        output.on("data", (jsonldGraph) => {
-          console.log("jsonldGraph created");
-          console.log("");
-
-          // as soon as there are several IRIs in the output, the serializer
-          // produces a JSON-LD @graph structure. However, the first element
-          // shoult be the MappingSet according to JSON-LD frame, so we are
-          // only interested in this
-          const jsonld = jsonldGraph["@graph"][0];
-
-          // The following bug is strange:
-          // The specific datatype declaration as XSDDateURI for "pav:authoredOn"
-          // does not seem to be acknowledged by the json-ld serializer, and
-          // therefore the json-ld context does not make the correct alias
-          // replacement with "mapping_date".
-          // Provisional fix:
-          // if ("pav:authoredOn" in jsonld) {
-          //   jsonld["mapping_date"] = jsonld["pav:authoredOn"];
-          //   delete jsonld["pav:authoredOn"];
-
-          //   sssom_json_ld["mapping_date"] = jsonld["pav:authoredOn"];
-          // }
-          // if ("mappings" in jsonld) {
-          //   const mappings = jsonld["mappings"];
-          //   if (Array.isArray(mappings)) {
-          //     mappings.forEach((mapping) => {
-          //       if ("pav:authoredOn" in mapping) {
-          //         mapping["mapping_date"] = mapping["pav:authoredOn"];
-          //         sssom_json_ld["mapping_date"] = mapping["pav:authoredOn"];
-
-          //         delete mapping["pav:authoredOn"];
-
-          //         // TODO: implement for sssom_json_ld
-          //       }
-          //     });
-          //   }
-          // }
-
-          // The following seems to have no other option, more a bug in the SSOM / LinkML schema:
-          if ("mapping_set_source" in jsonld) {
-            const mapping_set_source = jsonld["mapping_set_source"];
-            if (!Array.isArray(mapping_set_source)) {
-              jsonld["mapping_set_source"] = [mapping_set_source];
-            }
-          }
-        });
-      }
-
       console.groupEnd();
-      console.log(sssom_json_ld);
-      throw "asdfkj";
-      //return sssom_json_ld;
+      return sssom_json_ld;
     },
 
     exportCSV() /**OK */ {
@@ -828,7 +507,7 @@ export default {
     async saveMappingSetInRepo() {
       let sssom_json_ld = await this.create_sssom_json_ld();
       // Create Document in Cordra
-      var cordra_submit_obj = this.cordraCreateDocument({
+      this.cordraCreateDocument({
         type: "MappingSet",
         content: sssom_json_ld,
       }).then((createdObject) => {
