@@ -3,7 +3,7 @@
     {{ headerStyle }}
     <div class="columns">
       <div class="column is-3">
-        <router-link to="/" target="_blank"
+        <router-link to="/"
           ><img :src="mappingBioLogo" class="mappingBioLogo" /></router-link
         ><br />
         <router-link to="imprint" class="ownFont mappingBioLogo"
