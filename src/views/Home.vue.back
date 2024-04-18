@@ -879,6 +879,10 @@ export default {
     },
 
     dropdownExportFormat() {
+      console.log(
+        "dat",
+        this.$store.getters["keycloak/getStatusAuthenticated"]
+      );
       const _dropdownExportFormat = [
         "Export",
         "CSV",

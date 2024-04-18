@@ -12,6 +12,12 @@ You can also enter the author, licence and other informations, if necessary. -->
       </div>
     </div>
     <div class="field">
+      <label class="label">Author ORCID</label>
+      <div class="control">
+        <input class="input" type="text" v-model="authorOrcid" />
+      </div>
+    </div>
+    <div class="field">
       <label class="label">Mapping set title</label>
       <div class="control">
         <input class="input" type="text" v-model="mapping_set_title" />
@@ -103,7 +109,8 @@ export default {
   data() {
     return {
       versionMapper: process.env.VUE_APP_VERSION,
-      author: "",
+      author: this.$keycloak_name() ? this.$keycloak_name() : "",
+      authorOrcid: this.$keycloak_orcid() ? this.$keycloak_orcid() : "",
       mapping_set_title: "",
       comment: "",
 
@@ -396,13 +403,24 @@ export default {
 
       // Create mapping set here
 
-      mappingSet.push(
-        rdf_data_model.quad(
-          rdf_data_model.namedNode("MappingSet"),
-          rdf_data_model.namedNode("https://w3id.org/sssom/author_label"),
-          rdf_data_model.literal(this.author)
-        )
-      );
+      if (this.author) {
+        mappingSet.push(
+          rdf_data_model.quad(
+            rdf_data_model.namedNode("MappingSet"),
+            rdf_data_model.namedNode("https://w3id.org/sssom/creator_label"),
+            rdf_data_model.literal(this.author)
+          )
+        );
+      }
+      if (this.authorOrcid) {
+        mappingSet.push(
+          rdf_data_model.quad(
+            rdf_data_model.namedNode("MappingSet"),
+            rdf_data_model.namedNode("https://w3id.org/sssom/creator_label"),
+            rdf_data_model.literal("https://orcid.org/" + this.authorOrcid)
+          )
+        );
+      }
 
       mappingSet.push(
         rdf_data_model.quad(
