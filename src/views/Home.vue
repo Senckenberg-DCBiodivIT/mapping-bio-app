@@ -420,20 +420,17 @@ export default {
             let tempBindingsStream = null;
 
             // Select the query
+            let query = "";
             if (that.expressivity[position] === "skos") {
-              tempBindingsStream = await that.rdfObj.engines[position][
-                idxEngine
-              ].queryBindings(that.query.firstLevelClass_SKOS);
+              query = that.query.firstLevelClass_SKOS;
             } else if (that.expressivity[position] === "owl") {
-              tempBindingsStream = await that.rdfObj.engines[position][
-                idxEngine
-              ].queryBindings(that.query.firstLevelClass_OWL);
+              query = that.query.firstLevelClass_OWL;
             } else {
-              tempBindingsStream = await that.rdfObj.engines[position][
-                idxEngine
-              ].queryBindings(that.query.firstLevelClass_RDFS);
+              query = that.query.firstLevelClass_RDFS;
             }
-            // that.queueCount++;
+            tempBindingsStream = await that.rdfObj.engines[position][
+              idxEngine
+            ].queryBindings(query);
 
             // Catch data
             tempBindingsStream.on("data", (bindings) => {
