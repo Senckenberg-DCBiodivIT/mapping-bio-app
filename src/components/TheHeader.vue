@@ -4,7 +4,7 @@
     <div class="columns">
       <div class="column is-3">
         <router-link to="/" target="_blank"
-          ><img :src="mappingBioLogo" class="mappingBioLogo" /></a
+          ><img :src="mappingBioLogo" class="mappingBioLogo" /></router-link
         ><br />
         <router-link to="imprint" class="ownFont mappingBioLogo"
           >About</router-link
