@@ -1,0 +1,48 @@
+version: "3.7"
+
+services:
+  cordra:
+    container_name: cordra
+    image: cordra-tomcat-biodt:2.5.0
+    build:
+      context: cordra/
+      dockerfile: Dockerfile
+    env_file:
+      - variables.env
+    # Comment these lines to not persist the Cordra data directory
+    volumes:
+      - cordra-volume:/opt/cordra-data
+    depends_on:
+      - mongo
+      - solr-cordra
+    ports:
+      - "8080:8080"
+      - "9000:9000"
+    restart: unless-stopped
+
+  mongo:
+    container_name: mongo
+    image: mongo:5.0.14-focal
+    env_file:
+      - variables.env
+    volumes:
+      - mongodb-volume:/data/db
+      - ./mongodb/docker-entrypoint-initdb.d/mongo-init.sh:/docker-entrypoint-initdb.d/mongo-init.sh:ro
+      - ./mongodb/mongod.conf:/etc/mongod.conf
+    command: "--config /etc/mongod.conf"
+    restart: unless-stopped
+
+  solr-cordra:
+    container_name: solr-cordra
+    image: solr-cordra:0.1
+    build:
+      context: ./solr
+      dockerfile: Dockerfile
+    volumes:
+      - solr-volume:/var/solr
+    restart: unless-stopped
+
+volumes:
+  cordra-volume:
+  mongodb-volume:
+  solr-volume:

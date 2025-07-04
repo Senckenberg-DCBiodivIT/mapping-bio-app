@@ -1,0 +1,106 @@
+<!--
+  This HTML+JavaScript Document is supposed to be included via an iFrame
+  into Cordra's UI as an option for custom authentication. It connects to
+  the provided Keycloak instance and opens a popup for the user to authenticate
+  at Keycloak and configured identity providers.
+
+  It was required to implement this via a popup (which makes the script more
+  complicated than doing all authentication in the iFrame) because the
+  identity provider ORCID that we want to use does not allow iFrames (also
+  this is not so much in the sense of OAUTH).
+
+  Communication between the Cordra main frame, the iFrame and the popup is
+  maintained via the postMessage function.
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NFDI4Earth login</title>
+
+    <form>
+      <button
+        id="button-custom-keycloak-login"
+        type="button"
+        class="btn btn-sm btn-primary"
+        style="min-width: 130px; display: none"
+        data-loading-text="Authenticating..."
+      >
+        Authenticate via custom BioDT Login
+      </button>
+    </form>
+  </head>
+  <body>
+    <script
+      src="{__REPLACE_KEYCLOAK_BASE_URL__}/js/keycloak.js"
+      async
+      defer
+    ></script>
+    <script>
+      window.onload = function () {
+        keycloak = new Keycloak({
+          url: "{__REPLACE_KEYCLOAK_BASE_URL__}",
+          realm: "{__REPLACE_KEYCLOAK_REALM__}",
+          clientId: "{__REPLACE_KEYCLOAK_CLIENT_ID__}",
+        });
+
+        keycloak.onTokenExpired = function () {
+          keycloak
+            .updateToken(30)
+            .success(() => {
+              console.log("Successfully got a new token", keycloak.token);
+              let message = {
+                type: "customAuthentication",
+                token: keycloak.token,
+              };
+
+              window.parent.postMessage(message, "*");
+            })
+            .error(() => {
+              console.log("Error upon refreshing the keycloak token");
+            });
+        };
+
+        keycloak
+          .init({
+            checkLoginIframe: false,
+          })
+          .then(function (authenticated) {
+            if (authenticated) {
+              console.log(keycloak);
+              let message = {
+                token: keycloak.token,
+              };
+
+              if (window.opener) {
+                message.type = "keycloakAuthSuccess";
+                window.opener.postMessage(message, "*");
+                window.close();
+              } else {
+                message.type = "customAuthentication";
+                window.parent.postMessage(message, "*");
+              }
+            } else {
+              const button = document.getElementById(
+                "button-custom-keycloak-login"
+              );
+              button.style.display = "block";
+              button.onclick = function () {
+                window.open(keycloak.createLoginUrl(), "Keycloak login popup");
+              };
+            }
+          });
+
+        window.addEventListener("message", (event) => {
+          let message = event.data;
+          if (message && message.type === "signOut") {
+            keycloak.logout();
+          } else if (message && message.type === "keycloakAuthSuccess") {
+            keycloak.login();
+          }
+        });
+      };
+    </script>
+  </body>
+</html>

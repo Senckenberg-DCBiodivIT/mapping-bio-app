@@ -1,0 +1,17 @@
+variables.env
+
+devops/venv
+devops/cordra/keycloakConfig.json
+
+# ignore all certificates / private keys
+**.pem
+**.pfx
+**.bin
+
+bin/
+
+lib/
+
+lib64
+
+pyvenv.cfg

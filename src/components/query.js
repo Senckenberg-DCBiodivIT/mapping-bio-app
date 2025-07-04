@@ -52,11 +52,11 @@ export const query = {
           ?subject rdfs:label ?label .
 
           FILTER NOT EXISTS { ?subject owl:deprecated "true"^^<http://www.w3.org/2001/XMLSchema#boolean> }
-          FILTER NOT EXISTS {
-            ?subject rdfs:subClassOf ?any .
-            ?any a owl:Class
-
-          }
+          #FILTER NOT EXISTS {
+          #  ?subject rdfs:subClassOf ?any .
+          #  ?any a owl:Class
+#
+#          }
 
 
     }

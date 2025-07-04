@@ -428,12 +428,16 @@ export default {
             } else {
               query = that.query.firstLevelClass_RDFS;
             }
+            console.log("will query");
+            console.log(query);
             tempBindingsStream = await that.rdfObj.engines[position][
               idxEngine
             ].queryBindings(query);
 
             // Catch data
-            tempBindingsStream.on("data", (bindings) => {
+            tempBindingsStream.on("data", (bindings, yo) => {
+              console.log("got data ", yo);
+              console.log(bindings);
               // detected classes
               that.rdfObj.classes[position][
                 bindings.entries.hashmap.node.children[0].value.id
@@ -453,7 +457,7 @@ export default {
                     "@en"
                   )) ||
                 that.expressivity[position] !== "skos";
-
+              console.log("labelValid: ", labelValid, id);
               if (labelValid) {
                 for (var treeItem of tree_options) {
                   if (treeItem.id == id) {
@@ -476,7 +480,7 @@ export default {
                   //       position: position, // for the sparql engine (source or engine, left or right) //TODO: do we still need it?
                   //     });
                   //   });
-
+                  console.log("will push");
                   tree_options.push({
                     id: id,
                     label:
